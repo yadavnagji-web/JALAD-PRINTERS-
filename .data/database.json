@@ -82,6 +82,47 @@
   ],
   "orders": [
     {
+      "id": "ord-test-101",
+      "orderNumber": "SQP-20261010-9999",
+      "customerName": "Test Customer",
+      "customerPhone": "9982151938",
+      "items": [
+        {
+          "id": "item-1",
+          "document": {
+            "id": "doc-1",
+            "originalFileName": "Aadhaar_Card.pdf",
+            "fileSize": 102400,
+            "mimeType": "application/pdf",
+            "sha256Hash": "abc123hash",
+            "uploadedAt": "2026-10-10T21:00:00Z",
+            "storagePath": "/uploads/test.pdf"
+          },
+          "config": {
+            "paperSize": "A4",
+            "colorMode": "bw",
+            "copies": 1,
+            "duplex": false
+          },
+          "calculatedPrice": 2,
+          "pageCountToPrint": 1
+        }
+      ],
+      "subtotal": 2,
+      "tax": 0,
+      "totalAmount": 5,
+      "paymentStatus": "paid",
+      "paymentMethod": "counter_cash",
+      "createdAt": "2026-10-10T21:59:00Z",
+      "printStatus": "queued",
+      "paymentTxnId": "CASH-754079",
+      "paidAt": "2026-10-11T04:59:14.079Z",
+      "assignedPrinterId": "printer-hp-1",
+      "assignedPrinterName": "HP LaserJet Pro MFP M428fdw (High-Speed B&W & Duplex)",
+      "counterOperator": "Shop Owner Test",
+      "verifiedHashMatch": true
+    },
+    {
       "id": "ord-1791689370625",
       "orderNumber": "SQP-20261011-8607",
       "customerName": "Walk-in Customer",
@@ -188,21 +229,46 @@
       "subtotal": 10,
       "tax": 0,
       "totalAmount": 10,
-      "paymentStatus": "pending",
+      "paymentStatus": "paid",
       "paymentMethod": "counter_cash",
-      "paymentTxnId": null,
-      "paidAt": null,
+      "paymentTxnId": "CASH-864736",
+      "paidAt": "2026-10-11T04:27:44.736Z",
       "createdAt": "2026-10-11T02:11:38.636Z",
-      "printStatus": "pending_payment",
-      "assignedPrinterId": null,
-      "assignedPrinterName": null,
+      "printStatus": "queued",
+      "assignedPrinterId": "printer-epson-1",
+      "assignedPrinterName": "Epson EcoTank L8050 (Colour & Photo Specialist)",
       "retryCount": 0,
       "failureReason": null,
       "completedAt": null,
-      "verifiedHashMatch": true
+      "verifiedHashMatch": true,
+      "counterOperator": "Shop Owner"
     }
   ],
   "transactions": [
+    {
+      "id": "TXN-1791694754079",
+      "orderId": "ord-test-101",
+      "orderNumber": "SQP-20261010-9999",
+      "amount": 5,
+      "method": "counter_cash",
+      "status": "success",
+      "gatewayRef": "CASH-754079",
+      "operator": "Shop Owner Test",
+      "createdAt": "2026-10-11T04:59:14.079Z",
+      "verifiedAt": "2026-10-11T04:59:14.079Z"
+    },
+    {
+      "id": "TXN-1791692864737",
+      "orderId": "ord-1791684698636",
+      "orderNumber": "SQP-20261011-1709",
+      "amount": 10,
+      "method": "counter_cash",
+      "status": "success",
+      "gatewayRef": "CASH-864736",
+      "operator": "Shop Owner",
+      "createdAt": "2026-10-11T04:27:44.737Z",
+      "verifiedAt": "2026-10-11T04:27:44.737Z"
+    },
     {
       "id": "TXN-1791691807611",
       "orderId": "ord-test-popup",
