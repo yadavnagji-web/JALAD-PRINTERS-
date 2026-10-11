@@ -82,6 +82,67 @@
   ],
   "orders": [
     {
+      "id": "ord-1791689370625",
+      "orderNumber": "SQP-20261011-8607",
+      "customerName": "Walk-in Customer",
+      "customerPhone": "Counter",
+      "items": [
+        {
+          "id": "item-doc-1791689314586-womev",
+          "document": {
+            "id": "doc-1791689314586-womev",
+            "originalFileName": "_INDIRA -PUNJILAL TF.jpg",
+            "fileSize": 3210356,
+            "mimeType": "image/jpeg",
+            "sha256Hash": "28312b9b3a5e2f141c01a3174d60990faa70f39bc546b5fe7a1c556339e114c4",
+            "uploadedAt": "2026-10-11T03:28:34.586Z",
+            "storagePath": "blob:https://ais-dev-fqbunyhqxwt3hiic5aqsub-461049006452.asia-southeast1.run.app/478e6297-e1a3-4cc7-8316-b9ad48fb9126",
+            "previewUrl": "blob:https://ais-dev-fqbunyhqxwt3hiic5aqsub-461049006452.asia-southeast1.run.app/478e6297-e1a3-4cc7-8316-b9ad48fb9126",
+            "pageCount": 1,
+            "dimensions": {
+              "width": 2228,
+              "height": 3013,
+              "unit": "px"
+            },
+            "effectiveDpi": 258,
+            "estimatedBlurScore": 0,
+            "qualityRecommendation": "high",
+            "isOfficialIdDoc": false,
+            "qualityWarning": null
+          },
+          "config": {
+            "paperSize": "A4",
+            "orientation": "portrait",
+            "pageRange": "all",
+            "copies": 1,
+            "colorMode": "bw",
+            "duplex": false,
+            "scaling": "actual_size",
+            "quality": "high",
+            "mergeIdCards": false
+          },
+          "calculatedPrice": 2,
+          "pageCountToPrint": 1
+        }
+      ],
+      "subtotal": 2,
+      "tax": 0,
+      "totalAmount": 5,
+      "paymentStatus": "paid",
+      "paymentMethod": "counter_cash",
+      "paymentTxnId": "CASH-698597",
+      "paidAt": "2026-10-11T03:34:58.597Z",
+      "createdAt": "2026-10-11T03:29:30.627Z",
+      "printStatus": "queued",
+      "assignedPrinterId": "printer-hp-1",
+      "assignedPrinterName": "HP LaserJet Pro MFP M428fdw (High-Speed B&W & Duplex)",
+      "retryCount": 0,
+      "failureReason": null,
+      "completedAt": null,
+      "verifiedHashMatch": true,
+      "counterOperator": "Shop Owner"
+    },
+    {
       "id": "ord-1791684698636",
       "orderNumber": "SQP-20261011-1709",
       "customerName": "Walk-in Customer",
@@ -141,6 +202,32 @@
       "verifiedHashMatch": true
     }
   ],
-  "transactions": [],
-  "auditLogs": []
+  "transactions": [
+    {
+      "id": "TXN-1791691807611",
+      "orderId": "ord-test-popup",
+      "orderNumber": "SQP-TEST-001",
+      "amount": 5,
+      "method": "counter_cash",
+      "status": "success",
+      "gatewayRef": "CASH-807611",
+      "operator": "Shop Owner",
+      "createdAt": "2026-10-11T04:10:07.611Z",
+      "verifiedAt": "2026-10-11T04:10:07.611Z"
+    },
+    {
+      "id": "TXN-1791689698597",
+      "orderId": "ord-1791689370625",
+      "orderNumber": "SQP-20261011-8607",
+      "amount": 5,
+      "method": "counter_cash",
+      "status": "success",
+      "gatewayRef": "CASH-698597",
+      "operator": "Shop Owner",
+      "createdAt": "2026-10-11T03:34:58.597Z",
+      "verifiedAt": "2026-10-11T03:34:58.597Z"
+    }
+  ],
+  "auditLogs": [],
+  "registrations": []
 }

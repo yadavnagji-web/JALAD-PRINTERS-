@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { CustomerOrder, OrderItem, PricingSettings, ShopSettings } from '../types';
 import { api } from '../services/api';
+import { CashOrOnlinePaymentModal } from './CashOrOnlinePaymentModal';
 
 interface OrderSummaryCheckoutProps {
   items: OrderItem[];
@@ -58,6 +59,7 @@ export const OrderSummaryCheckout: React.FC<OrderSummaryCheckoutProps> = ({
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [isAwaitingApproval, setIsAwaitingApproval] = useState(false);
   const [awaitingOrder, setAwaitingOrder] = useState<CustomerOrder | null>(null);
+  const [isCashOrOnlineModalOpen, setIsCashOrOnlineModalOpen] = useState(false);
 
   // Poll for owner approval when waiting for QR or Cash approval
   useEffect(() => {
@@ -315,6 +317,33 @@ export const OrderSummaryCheckout: React.FC<OrderSummaryCheckoutProps> = ({
         </div>
       </div>
 
+      {/* Direct One-Click Cash / Online Payment Trigger Card */}
+      <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 rounded-3xl p-4 sm:p-5 text-white shadow-xl flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div>
+          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/20 uppercase tracking-wider">
+            Fast Print Checkout
+          </span>
+          <h3 className="text-base sm:text-lg font-black mt-1">
+            {language === 'hi' ? 'प्रिंट ऑर्डर दर्ज करें' : 'Place Print Order'}
+          </h3>
+          <p className="text-xs text-blue-100">
+            {language === 'hi'
+              ? 'कैश या ऑनलाइन UPI चुनें • 1 क्लिक में ऑर्डर दर्ज होगा'
+              : 'Choose Cash or Online UPI with instant counter verification'}
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => setIsCashOrOnlineModalOpen(true)}
+          className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm sm:text-base shadow-lg shadow-black/20 active:scale-95 transition flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+        >
+          <CreditCard className="w-5 h-5 text-slate-900" />
+          <span>{language === 'hi' ? `🖨️ प्रिंट ऑर्डर करें (₹${totalAmount.toFixed(2)})` : `Print Order (₹${totalAmount.toFixed(2)})`}</span>
+          <ArrowRight className="w-4 h-4 text-slate-900" />
+        </button>
+      </div>
+
       {/* Payment Selector */}
       <div className="bg-white rounded-2xl border border-slate-200 p-5 space-y-4 shadow-xs">
         <h4 className="text-sm font-bold text-slate-900 flex items-center justify-between">
@@ -479,20 +508,14 @@ export const OrderSummaryCheckout: React.FC<OrderSummaryCheckoutProps> = ({
             <div className="w-full pt-2 border-t border-slate-200 text-center space-y-2">
               <button
                 type="button"
-                onClick={handleSimulatePaymentWebhook}
-                disabled={!confirmedPreservation || isProcessing}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition disabled:opacity-50"
+                onClick={() => setIsCashOrOnlineModalOpen(true)}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md transition flex items-center justify-center gap-2 mx-auto cursor-pointer"
               >
-                {isProcessing ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" /> Verifying with Bank...
-                  </span>
-                ) : (
-                  'भुगतान हो गया? पुष्टि करें और प्रिंट शुरू करें'
-                )}
+                <CheckCircle2 className="w-4 h-4" />
+                <span>भुगतान हो गया? पुष्टि करें और प्रिंट शुरू करें</span>
               </button>
               <p className="text-[11px] text-slate-400">
-                (Production verifies server-side bank webhooks before releasing job to Windows printer spooler)
+                (कैश या ऑनलाइन पुष्टि पॉप-अप खुलेगा)
               </p>
             </div>
           </div>
@@ -644,9 +667,8 @@ export const OrderSummaryCheckout: React.FC<OrderSummaryCheckoutProps> = ({
           <div className="p-4 bg-amber-50/90 rounded-2xl border border-amber-200 text-center space-y-3">
             <button
               type="button"
-              onClick={() => handlePlaceOrderAndPay(false)}
-              disabled={isProcessing}
-              className="w-full sm:w-auto px-8 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold shadow-md transition disabled:opacity-50 inline-flex items-center justify-center gap-2"
+              onClick={() => setIsCashOrOnlineModalOpen(true)}
+              className="w-full sm:w-auto px-8 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold shadow-md transition inline-flex items-center justify-center gap-2 cursor-pointer"
             >
               <Receipt className="w-4 h-4" />
               <span>नकद भुगतान से प्रिंट करें (Pay Cash ₹{totalAmount.toFixed(2)})</span>
@@ -694,6 +716,22 @@ export const OrderSummaryCheckout: React.FC<OrderSummaryCheckoutProps> = ({
           </div>
         </div>
       )}
+      {/* Cash or Online Payment Popup Modal */}
+      <CashOrOnlinePaymentModal
+        isOpen={isCashOrOnlineModalOpen}
+        onClose={() => setIsCashOrOnlineModalOpen(false)}
+        orderNumber={orderNumber}
+        totalAmount={totalAmount}
+        subtotal={subtotal}
+        items={items}
+        settings={settings}
+        pricing={pricing}
+        language={language}
+        onOrderCompleted={(order) => {
+          setIsCashOrOnlineModalOpen(false);
+          onOrderCompleted(order);
+        }}
+      />
     </div>
   );
 };

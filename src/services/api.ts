@@ -249,7 +249,10 @@ export class ApiClient {
   // --- Orders ---
   public async getOrders(): Promise<CustomerOrder[]> {
     try {
-      const res = await fetch('/api/orders');
+      const res = await fetch(`/api/orders?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+      });
       if (res.ok) {
         const data = await res.json();
         saveToStorage(LOCAL_STORAGE_KEYS.ORDERS, data);
@@ -261,7 +264,10 @@ export class ApiClient {
 
   public async getOrderById(id: string): Promise<CustomerOrder | null> {
     try {
-      const res = await fetch(`/api/orders/${id}`);
+      const res = await fetch(`/api/orders/${id}?_t=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Cache-Control': 'no-cache, no-store, must-revalidate' },
+      });
       if (res.ok) {
         return await res.json();
       }

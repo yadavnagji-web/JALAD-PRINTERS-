@@ -31,7 +31,7 @@ export const OwnerPaymentApprovalModal: React.FC<OwnerPaymentApprovalModalProps>
   const [dismissedOrderIds, setDismissedOrderIds] = useState<Set<string>>(new Set());
   const lastAlertedOrderId = useRef<string | null>(null);
 
-  // Poll for orders awaiting approval every 2 seconds
+  // Poll for orders awaiting approval every 1.2 seconds for instant popup response
   useEffect(() => {
     let isMounted = true;
     const checkPending = async () => {
@@ -40,7 +40,7 @@ export const OwnerPaymentApprovalModal: React.FC<OwnerPaymentApprovalModalProps>
         if (!isMounted) return;
         const awaiting = allOrders.filter(
           (o) =>
-            o.paymentStatus === 'counter_pending' &&
+            (o.paymentStatus === 'counter_pending' || o.paymentStatus === 'pending') &&
             o.printStatus !== 'cancelled' &&
             !dismissedOrderIds.has(o.id)
         );
@@ -51,7 +51,7 @@ export const OwnerPaymentApprovalModal: React.FC<OwnerPaymentApprovalModalProps>
     };
 
     checkPending();
-    const interval = setInterval(checkPending, 2000);
+    const interval = setInterval(checkPending, 1200);
     return () => {
       isMounted = false;
       clearInterval(interval);

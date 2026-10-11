@@ -64,6 +64,16 @@ export default function App() {
   const [isOwnerShareModalOpen, setIsOwnerShareModalOpen] = useState(false);
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
   const [isOwnerLoginModalOpen, setIsOwnerLoginModalOpen] = useState(false);
+  const [isOwnerDevice, setIsOwnerDevice] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return (
+        localStorage.getItem('sqp_is_owner_device') === 'true' ||
+        localStorage.getItem('sqp_auto_start') === 'true' ||
+        localStorage.getItem('sqp_owner_minimized') === 'true'
+      );
+    }
+    return false;
+  });
 
   // Initial load, URL routing, and Automatic User App Update Detection
   useEffect(() => {
@@ -235,10 +245,11 @@ export default function App() {
       />
 
       {/* 
-        CRITICAL REQUIREMENT: Payment Popup ONLY opens on the Owner's screen!
-        It is strictly NOT rendered when isAdminOpen is false (customer view).
+        Shop Owner Payment Approval Popup:
+        Active on owner desktop / admin panel (minimized or open).
+        When a customer places a print order on mobile, this popup alerts the owner immediately!
       */}
-      {isAdminOpen && (
+      {(isAdminOpen || isOwnerDevice) && (
         <OwnerPaymentApprovalModal
           onOrderApproved={(order) => {
             if (trackingOrder && trackingOrder.id === order.id) {
@@ -587,6 +598,8 @@ export default function App() {
         onSuccess={() => {
           setIsOwnerLoginModalOpen(false);
           setIsAdminOpen(true);
+          localStorage.setItem('sqp_is_owner_device', 'true');
+          setIsOwnerDevice(true);
         }}
       />
 
