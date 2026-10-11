@@ -24,6 +24,8 @@ import { OwnerPaymentApprovalModal } from './components/OwnerPaymentApprovalModa
 import { OwnerLoginModal } from './components/OwnerLoginModal';
 import { DesktopSetupModal } from './components/DesktopSetupModal';
 import { OwnerBackgroundMonitor } from './components/OwnerBackgroundMonitor';
+import { PrinterQueueTaskbarWidget } from './components/PrinterQueueTaskbarWidget';
+import { ShopHeroBanner } from './components/ShopHeroBanner';
 import { playOrderChime } from './utils/audioAlert';
 import { calculateOrderTotal } from './utils/pricing';
 import {
@@ -44,13 +46,29 @@ import {
   Lock,
   Megaphone,
   X,
+  Smartphone,
+  Laptop,
+  Download,
 } from 'lucide-react';
 
 export default function App() {
   const [settings, setSettings] = useState<ShopSettings>(DEFAULT_SHOP_SETTINGS);
   const [pricing, setPricing] = useState<PricingSettings>(DEFAULT_PRICING);
   const [language, setLanguage] = useState<'hi' | 'en'>('hi');
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
+  const [isAdminOpen, setIsAdminOpen] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return (
+        params.get('mode') === 'admin' ||
+        params.get('role') === 'admin' ||
+        params.get('mode') === 'owner' ||
+        params.get('admin') === 'true' ||
+        params.get('desktop') === 'true' ||
+        localStorage.getItem('sqp_system_role') === 'admin'
+      );
+    }
+    return false;
+  });
 
   // Wizard Step State: 1 = Fast Upload, 2 = Print Options, 3 = Review & Payment, 4 = Print Progress
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3 | 4>(1);
@@ -161,9 +179,22 @@ export default function App() {
       });
     }
 
+    // Secret keyboard shortcut (Ctrl+Shift+A or Ctrl+Alt+A) to open Owner Admin Login
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') ||
+        (e.ctrlKey && e.altKey && e.key.toLowerCase() === 'a')
+      ) {
+        e.preventDefault();
+        setIsOwnerLoginModalOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
       clearInterval(updateInterval);
       document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('keydown', handleKeyDown);
     };
   }, []);
 
@@ -250,6 +281,25 @@ export default function App() {
     setIsOwnerLoginModalOpen(true);
   };
 
+  // Dedicated Native Desktop Popup Mode (Launched automatically by 24x7 Windows Background Daemon)
+  const isPopupMode =
+    typeof window !== 'undefined' &&
+    new URLSearchParams(window.location.search).get('popup') === 'true';
+
+  if (isPopupMode) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-center items-center p-3 select-none">
+        <OwnerPaymentApprovalModal
+          onOrderApproved={(order) => {
+            if (trackingOrder && trackingOrder.id === order.id) {
+              setTrackingOrder(order);
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
   // 24x7 Minimized Shopkeeper Background Monitor View (Runs 24x7 on Desktop)
   if (isOwnerMinimizedView) {
     return (
@@ -274,12 +324,21 @@ export default function App() {
               setTrackingOrder(order);
             }
           }}
+          onOpenAdmin={() => {
+            setIsOwnerMinimizedView(false);
+            setIsAdminOpen(true);
+            setIsOwnerDevice(true);
+          }}
         />
 
         <DesktopSetupModal
           isOpen={isDesktopSetupOpen}
           onClose={() => setIsDesktopSetupOpen(false)}
           settings={settings}
+          onOpenAdmin={() => {
+            setIsDesktopSetupOpen(false);
+            setIsOwnerLoginModalOpen(true);
+          }}
         />
       </div>
     );
@@ -326,6 +385,10 @@ export default function App() {
             if (trackingOrder && trackingOrder.id === order.id) {
               setTrackingOrder(order);
             }
+          }}
+          onOpenAdmin={() => {
+            setIsAdminOpen(true);
+            setIsOwnerDevice(true);
           }}
         />
       )}
@@ -683,7 +746,14 @@ export default function App() {
           setIsOwnerMinimizedView(true);
           localStorage.setItem('sqp_owner_minimized', 'true');
         }}
+        onOpenAdmin={() => {
+          setIsDesktopSetupOpen(false);
+          setIsOwnerLoginModalOpen(true);
+        }}
       />
+
+      {/* Mini Taskbar Printer Spooler Widget: shows due jobs & printer status on desktop/admin */}
+      <PrinterQueueTaskbarWidget />
 
       {/* Auto-Update Notification Banner / Popup */}
       {isAppUpdateAvailable && (
@@ -724,23 +794,15 @@ export default function App() {
         </div>
       )}
 
-      {/* Footer - Minimal and Clean */}
+      {/* Footer - Clean and Customer-Focused */}
       <footer className="mt-auto border-t border-slate-200 bg-white py-3 sm:py-4 text-xs text-slate-500">
         <div className="max-w-4xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2.5 text-center sm:text-left">
           <p className="text-xs font-semibold text-slate-700">
             Designed by Nagji Yadav Sakodar, 9982151938
           </p>
-
-          {/* Store Owner Portal Access Button */}
-          <button
-            type="button"
-            onClick={handleOwnerAccessPrompt}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition shadow-2xs"
-            title="दुकानदार / संचालक पोर्टल लॉगिन"
-          >
-            <Lock className="w-3.5 h-3.5 text-amber-600" />
-            <span>दुकानदार लॉगिन (Store Owner Portal)</span>
-          </button>
+          <p className="text-[11px] text-slate-400">
+            {settings.shopName || 'JALAD PRINTERS & EMITRA CENTER CHIKHALI'} • Fast Smart QR Print
+          </p>
         </div>
       </footer>
     </div>

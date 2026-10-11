@@ -47,7 +47,7 @@ export const DEFAULT_PRICING: PricingSettings = {
   colorSingleA3: 20.0,
   photo4x6: 25.0,
   passportSheet: 50.0,
-  minOrderAmount: 5.0,
+  minOrderAmount: 0.0,
   serviceCharge: 0.0,
 };
 

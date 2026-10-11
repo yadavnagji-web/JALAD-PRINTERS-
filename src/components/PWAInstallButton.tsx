@@ -65,10 +65,10 @@ export const PWAInstallButton: React.FC = () => {
       <button
         onClick={handleInstallClick}
         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition active:scale-95"
-        title="Install Smart QR Print App"
+        title="ग्राहक मोबाइल ऐप इंस्टॉल करें (Install Customer App)"
       >
         <Download className="w-3.5 h-3.5" />
-        <span>Install App</span>
+        <span>ग्राहक ऐप इंस्टॉल करें</span>
       </button>
 
       {showIOSGuide && (

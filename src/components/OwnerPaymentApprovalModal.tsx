@@ -12,6 +12,7 @@ import {
   Phone,
   ArrowRight,
   ShieldAlert,
+  Shield,
   Volume2,
 } from 'lucide-react';
 import { CustomerOrder } from '../types';
@@ -22,15 +23,46 @@ import { autoPrintOrder } from '../utils/silentPrinter';
 
 interface OwnerPaymentApprovalModalProps {
   onOrderApproved?: (order: CustomerOrder) => void;
+  onOpenAdmin?: () => void;
 }
 
 export const OwnerPaymentApprovalModal: React.FC<OwnerPaymentApprovalModalProps> = ({
   onOrderApproved,
+  onOpenAdmin,
 }) => {
   const [pendingOrders, setPendingOrders] = useState<CustomerOrder[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [dismissedOrderIds, setDismissedOrderIds] = useState<Set<string>>(new Set());
   const lastAlertedOrderId = useRef<string | null>(null);
+
+  // Persistent record of approved / processed orders so they NEVER reopen
+  const processedOrderIdsRef = useRef<Set<string>>(
+    (() => {
+      const set = new Set<string>();
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = localStorage.getItem('sqp_verified_order_ids');
+          if (raw) {
+            const list: string[] = JSON.parse(raw);
+            list.forEach((id) => set.add(id));
+          }
+        } catch {}
+      }
+      return set;
+    })()
+  );
+
+  const markOrderAsProcessed = (orderId: string) => {
+    processedOrderIdsRef.current.add(orderId);
+    setDismissedOrderIds((prev) => new Set(prev).add(orderId));
+    setPendingOrders((prev) => prev.filter((o) => o.id !== orderId));
+    if (typeof window !== 'undefined') {
+      try {
+        const arr = Array.from(processedOrderIdsRef.current).slice(-100);
+        localStorage.setItem('sqp_verified_order_ids', JSON.stringify(arr));
+      } catch {}
+    }
+  };
 
   // Poll and SSE for orders awaiting approval for instant popup response
   useEffect(() => {
@@ -45,7 +77,9 @@ export const OwnerPaymentApprovalModal: React.FC<OwnerPaymentApprovalModalProps>
           (o) =>
             (o.paymentStatus === 'counter_pending' || o.paymentStatus === 'pending') &&
             o.printStatus !== 'cancelled' &&
-            !dismissedOrderIds.has(o.id)
+            o.printStatus !== 'completed' &&
+            !dismissedOrderIds.has(o.id) &&
+            !processedOrderIdsRef.current.has(o.id)
         );
         setPendingOrders(awaiting);
       } catch (e) {
@@ -148,38 +182,57 @@ export const OwnerPaymentApprovalModal: React.FC<OwnerPaymentApprovalModalProps>
   if (!currentOrder) return null;
 
   const handleApprove = async (method: 'online' | 'cash') => {
+    if (!currentOrder) return;
+    const orderToApprove = currentOrder;
     setIsProcessing(true);
+    // Immediately mark as processed so it NEVER reopens and popup dismisses cleanly
+    markOrderAsProcessed(orderToApprove.id);
     try {
       const approved = await api.approvePayment(
-        currentOrder.id,
+        orderToApprove.id,
         method,
         'Shop Owner',
-        currentOrder.paymentTxnId || undefined
+        orderToApprove.paymentTxnId || undefined
       );
       if (approved) {
         autoPrintOrder(approved);
-        setPendingOrders((prev) => prev.filter((o) => o.id !== currentOrder.id));
         if (onOrderApproved) onOrderApproved(approved);
       }
     } catch (err) {
       console.error('Failed to approve payment:', err);
     } finally {
       setIsProcessing(false);
+      // If opened as a native desktop popup window, close the window after dispatching print
+      if (typeof window !== 'undefined' && window.location.search.includes('popup=true')) {
+        setTimeout(() => {
+          try {
+            window.close();
+          } catch {}
+        }, 1200);
+      }
     }
   };
 
   const handleReject = async () => {
+    if (!currentOrder) return;
+    const orderToReject = currentOrder;
     setIsProcessing(true);
+    markOrderAsProcessed(orderToReject.id);
     try {
-      await api.updateOrderStatus(currentOrder.id, {
+      await api.updateOrderStatus(orderToReject.id, {
         paymentStatus: 'failed',
         printStatus: 'cancelled',
         failureReason: 'दुकानदार द्वारा अस्वीकृत (Rejected by Shopkeeper)',
       });
-      setDismissedOrderIds((prev) => new Set(prev).add(currentOrder.id));
-      setPendingOrders((prev) => prev.filter((o) => o.id !== currentOrder.id));
     } finally {
       setIsProcessing(false);
+      if (typeof window !== 'undefined' && window.location.search.includes('popup=true')) {
+        setTimeout(() => {
+          try {
+            window.close();
+          } catch {}
+        }, 500);
+      }
     }
   };
 
@@ -201,13 +254,26 @@ export const OwnerPaymentApprovalModal: React.FC<OwnerPaymentApprovalModalProps>
               </p>
             </div>
           </div>
-          <button
-            onClick={() => setDismissedOrderIds((prev) => new Set(prev).add(currentOrder.id))}
-            className="p-1 rounded-full text-white/80 hover:text-white hover:bg-white/10"
-            title="Dismiss Alert"
-          >
-            <X className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenAdmin && (
+              <button
+                type="button"
+                onClick={onOpenAdmin}
+                className="px-2.5 py-1 rounded-xl bg-black/30 hover:bg-black/50 text-white text-[11px] font-bold flex items-center gap-1 transition shadow-xs cursor-pointer"
+                title="एडमिन पैनल खोलें"
+              >
+                <Shield className="w-3.5 h-3.5 text-amber-300" />
+                <span>एडमिन</span>
+              </button>
+            )}
+            <button
+              onClick={() => setDismissedOrderIds((prev) => new Set(prev).add(currentOrder.id))}
+              className="p-1.5 rounded-full text-white/80 hover:text-white hover:bg-white/20 transition cursor-pointer"
+              title="Dismiss Alert"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         {/* Order Details Body */}

@@ -186,31 +186,6 @@ export const CashOrOnlinePaymentModal: React.FC<CashOrOnlinePaymentModalProps> =
     setTimeout(() => setCopiedUpi(false), 2000);
   };
 
-  // 2. Direct Counter / Owner Quick Approval right inside modal
-  const handleQuickApprove = async (approveMethod: 'online' | 'cash') => {
-    if (!createdOrder) return;
-    setIsVerifying(true);
-    try {
-      const approved = await api.approvePayment(
-        createdOrder.id,
-        approveMethod,
-        'Shop Owner (Quick Verify)',
-        customerUtrNumber || undefined
-      );
-      if (approved) {
-        confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
-        playOrderChime();
-        autoPrintOrder(approved);
-        setCreatedOrder(null);
-        onOrderCompleted(approved);
-      }
-    } catch (err: any) {
-      setErrorMessage(err.message || 'पुष्टि करने में विफल');
-    } finally {
-      setIsVerifying(false);
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-3 sm:p-4 animate-in fade-in">
       <div className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden transform animate-in zoom-in-95 flex flex-col max-h-[92vh]">
@@ -233,7 +208,7 @@ export const CashOrOnlinePaymentModal: React.FC<CashOrOnlinePaymentModalProps> =
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-full text-white/80 hover:text-white hover:bg-white/20 transition"
+            className="p-1.5 rounded-full text-white/80 hover:text-white hover:bg-white/20 transition cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -241,7 +216,7 @@ export const CashOrOnlinePaymentModal: React.FC<CashOrOnlinePaymentModalProps> =
 
         {/* Modal Body */}
         <div className="p-4 sm:p-6 overflow-y-auto space-y-4">
-          {/* Awaiting Shopkeeper Approval View */}
+          {/* Customer Waiting Screen (Only shown after order is sent to shopkeeper) */}
           {createdOrder ? (
             <div className="space-y-4 text-center py-2 animate-in fade-in">
               <div className="w-16 h-16 rounded-3xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto animate-pulse shadow-md">
@@ -250,65 +225,37 @@ export const CashOrOnlinePaymentModal: React.FC<CashOrOnlinePaymentModalProps> =
 
               <div>
                 <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 inline-block">
-                  🔔 दुकानदार से पुष्टि की प्रतीक्षा (Awaiting Owner Approval)
+                  🔔 दुकानदार से सत्यापन की प्रतीक्षा (Awaiting Owner Verification)
                 </span>
                 <h4 className="text-lg font-black text-slate-900 mt-2 font-mono">
                   ऑर्डर #{createdOrder.orderNumber}
                 </h4>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  देय राशि: <strong className="text-slate-900 font-black text-base">₹{createdOrder.totalAmount.toFixed(2)}</strong> ({createdOrder.paymentMethod === 'counter_cash' ? 'नकद' : 'ऑनलाइन UPI'})
+                  देय राशि: <strong className="text-slate-900 font-black text-base">₹{createdOrder.totalAmount.toFixed(2)}</strong> ({createdOrder.paymentMethod === 'counter_cash' ? 'नकद भुगतान (Cash)' : 'ऑनलाइन UPI'})
                 </p>
               </div>
 
-              <div className="bg-amber-50/80 p-3.5 rounded-2xl border border-amber-200 text-xs text-amber-900 space-y-1">
-                <p className="font-bold flex items-center justify-center gap-1.5">
-                  <Volume2 className="w-4 h-4 text-amber-600" />
-                  दुकानदार के कंप्यूटर / सिस्टम पर अलर्ट भेज दिया गया है!
+              <div className="bg-emerald-50/90 p-4 rounded-2xl border-2 border-emerald-300 text-xs text-emerald-900 space-y-2">
+                <p className="font-black text-sm flex items-center justify-center gap-1.5 text-emerald-800">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                  दुकानदार के कंप्यूटर पर सत्यापन विंडो खुल गई है!
                 </p>
-                <p className="text-slate-600 text-[11px]">
-                  जैसे ही दुकानदार अपने कंप्यूटर या मोबाइल से पुष्टि करेंगे, प्रिंट तुरंत शुरू हो जाएगा।
+                <p className="text-slate-700 text-xs leading-relaxed">
+                  {createdOrder.paymentMethod === 'counter_cash'
+                    ? 'कृपया काउंटर पर नकद राशि दें। दुकानदार के अपने कंप्यूटर पर "सत्यापित करें" बटन दबाते ही प्रिंटर से स्वतः प्रिंट निकलना शुरू हो जाएगा।'
+                    : 'दुकानदार के स्क्रीन पर अलर्ट चला गया है। उनके सत्यापन करते ही आपका प्रिंट स्वतः निकल जाएगा।'}
                 </p>
               </div>
 
               <div className="flex items-center justify-center gap-2 text-xs font-bold text-blue-600 py-1">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>लाइव जांच जारी है (Polling for Approval)...</span>
-              </div>
-
-              {/* Instant Counter / Shop Owner Quick Verify Buttons */}
-              <div className="pt-3 border-t border-slate-200 space-y-2">
-                <p className="text-[11px] font-bold text-slate-600">
-                  🏪 दुकानदार त्वरित सत्यापन (Store Owner 1-Tap Verification):
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    disabled={isVerifying}
-                    onClick={() => handleQuickApprove('online')}
-                    className="p-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex flex-col items-center gap-1 shadow-md transition disabled:opacity-50"
-                  >
-                    <CheckCircle2 className="w-5 h-5" />
-                    <span>✓ Online UPI Received</span>
-                    <span className="text-[10px] font-normal opacity-90">ऑनलाइन प्राप्त हुआ</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={isVerifying}
-                    onClick={() => handleQuickApprove('cash')}
-                    className="p-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs flex flex-col items-center gap-1 shadow-md transition disabled:opacity-50"
-                  >
-                    <DollarSign className="w-5 h-5" />
-                    <span>💵 Cash Received</span>
-                    <span className="text-[10px] font-normal opacity-90">काउंटर नकद प्राप्त</span>
-                  </button>
-                </div>
+                <span>लाइव सत्यापन की प्रतीक्षा... (Auto-updating when approved)</span>
               </div>
 
               <button
                 type="button"
                 onClick={() => setCreatedOrder(null)}
-                className="text-xs text-slate-400 hover:text-slate-600 underline pt-2"
+                className="text-xs text-slate-400 hover:text-slate-600 underline pt-2 cursor-pointer"
               >
                 ← वापस भुगतान विकल्प पर जाएं
               </button>

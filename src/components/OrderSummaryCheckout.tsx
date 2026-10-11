@@ -59,12 +59,13 @@ export const OrderSummaryCheckout: React.FC<OrderSummaryCheckoutProps> = ({
   const [isAwaitingApproval, setIsAwaitingApproval] = useState(false);
   const [awaitingOrder, setAwaitingOrder] = useState<CustomerOrder | null>(null);
 
-  // Poll for owner approval when waiting for QR or Cash approval
+  // Poll & SSE for instant owner approval when waiting for QR or Cash approval
   useEffect(() => {
     if (!isAwaitingApproval || !awaitingOrder) return;
     let isCancelled = false;
+    let eventSource: EventSource | null = null;
 
-    const interval = setInterval(async () => {
+    const checkApproval = async () => {
       try {
         const check = await api.getOrderById(awaitingOrder.id);
         if (isCancelled || !check) return;
@@ -76,17 +77,36 @@ export const OrderSummaryCheckout: React.FC<OrderSummaryCheckoutProps> = ({
       } catch (e) {
         // Safe retry
       }
-    }, 1500);
+    };
+
+    const interval = setInterval(checkApproval, 1200);
+
+    if (typeof EventSource !== 'undefined') {
+      try {
+        eventSource = new EventSource('/api/orders/live');
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'order_approved' && data.data?.id === awaitingOrder.id) {
+              checkApproval();
+            }
+          } catch {}
+        };
+      } catch {}
+    }
 
     return () => {
       isCancelled = true;
       clearInterval(interval);
+      if (eventSource) eventSource.close();
     };
-  }, [isAwaitingApproval, awaitingOrder, onOrderCompleted]);
+  }, [isAwaitingApproval, awaitingOrder?.id, onOrderCompleted]);
 
   // Compute subtotal and total
   const subtotal = items.reduce((sum, item) => sum + item.calculatedPrice, 0);
-  const totalAmount = Math.max(pricing.minOrderAmount, subtotal + (pricing.serviceCharge || 0));
+  const totalAmount = pricing.minOrderAmount && pricing.minOrderAmount > 0
+    ? Math.max(pricing.minOrderAmount, subtotal + (pricing.serviceCharge || 0))
+    : subtotal + (pricing.serviceCharge || 0);
 
   // Generate unique order number
   const [orderNumber] = useState(
@@ -211,15 +231,40 @@ export const OrderSummaryCheckout: React.FC<OrderSummaryCheckoutProps> = ({
 
         <div className="flex items-center justify-center gap-2 text-xs font-bold text-blue-600">
           <Loader2 className="w-4 h-4 animate-spin" />
-          <span>सत्यापन की जाँच हो रही है (Live Polling)...</span>
+          <span>सत्यापन की जाँच हो रही है (Live Polling & SSE)...</span>
         </div>
 
-        <button
-          onClick={() => setIsAwaitingApproval(false)}
-          className="text-xs text-slate-400 hover:text-slate-600 underline"
-        >
-          वापस जाएं (Back to Checkout)
-        </button>
+        {/* Cancel Order Action */}
+        <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={async () => {
+              try {
+                if (awaitingOrder) {
+                  await api.updateOrderStatus(awaitingOrder.id, {
+                    paymentStatus: 'failed',
+                    printStatus: 'cancelled',
+                    failureReason: 'ग्राहक द्वारा रद्द किया गया (Cancelled by Customer)',
+                  });
+                }
+              } catch {}
+              setIsAwaitingApproval(false);
+              setAwaitingOrder(null);
+            }}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-95"
+          >
+            <X className="w-4 h-4 text-rose-600" />
+            <span>❌ ऑर्डर रद्द करें (Cancel Print Order)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setIsAwaitingApproval(false)}
+            className="text-xs text-slate-400 hover:text-slate-600 underline py-1"
+          >
+            वापस जाएं (Back)
+          </button>
+        </div>
       </div>
     );
   }

@@ -1,15 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Printer,
   Shield,
   Search,
-  Phone,
-  MessageSquare,
-  Clock,
-  Store,
-  Laptop,
-  Minimize2,
-  CheckCircle2,
+  Share2,
+  Check,
 } from 'lucide-react';
 import { ShopSettings } from '../types';
 import { PWAInstallButton } from './PWAInstallButton';
@@ -34,56 +29,68 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTracking,
   onOpenAdmin,
   isAdmin,
-  isOwnerDevice = false,
-  onToggleOwnerDevice,
-  onOpenDesktopSetup,
-  onMinimizeToTray,
 }) => {
+  const [copiedAppShare, setCopiedAppShare] = useState(false);
+  const clickCountRef = React.useRef(0);
+  const clickTimerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  const handleSecretLogoClick = () => {
+    clickCountRef.current += 1;
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    if (clickCountRef.current >= 3) {
+      clickCountRef.current = 0;
+      onOpenAdmin();
+    } else {
+      clickTimerRef.current = setTimeout(() => {
+        clickCountRef.current = 0;
+      }, 1500);
+    }
+  };
+
+  const handleShareApp = async () => {
+    const shareUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+    const shareData = {
+      title: settings.shopName || 'Smart QR Print',
+      text: `${settings.shopName || 'Smart QR Print'} - अपने मोबाइल से सीधे दस्तावेज और फोटो प्रिंट करें:`,
+      url: shareUrl,
+    };
+
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (e) {
+        // Fallback to clipboard
+      }
+    }
+
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(shareUrl);
+      setCopiedAppShare(true);
+      setTimeout(() => setCopiedAppShare(false), 2500);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
-      {/* Top Shop Info Strip */}
-      <div className="bg-slate-900 text-slate-300 text-[11px] py-1.5 px-4 hidden sm:block">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1.5 text-slate-200 font-medium">
-              <Store className="w-3.5 h-3.5 text-blue-400" />
-              {settings.shopAddress || 'Station Road, Jaipur'}
-            </span>
-            <span className="flex items-center gap-1.5 text-slate-400">
-              <Clock className="w-3.5 h-3.5 text-amber-400" />
-              {settings.openingHours}
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <a
-              href={`tel:${settings.mobileNumber}`}
-              className="flex items-center gap-1 hover:text-white transition"
-            >
-              <Phone className="w-3 h-3 text-emerald-400" />
-              {settings.mobileNumber}
-            </a>
-            <a
-              href={`https://wa.me/${settings.whatsappNumber.replace(/[^0-9]/g, '')}`}
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center gap-1 hover:text-white transition text-emerald-400 font-medium"
-            >
-              <MessageSquare className="w-3 h-3" />
-              WhatsApp
-            </a>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Bar - Optimized for Mobile & Desktop */}
+      {/* Main Bar - Clean, Professional Customer Header */}
       <div className="max-w-6xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
         {/* Mobile View: Line 1 = Shop Name, Line 2 = Action Buttons */}
         <div className="block sm:hidden space-y-1.5">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0">
+            <button
+              type="button"
+              onClick={handleSecretLogoClick}
+              className="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center shrink-0 cursor-pointer active:scale-90 transition"
+              title="Smart QR Print"
+            >
               <Printer className="w-4 h-4" />
-            </div>
-            <h1 className="text-sm font-black text-slate-900 truncate tracking-tight flex-1" title={settings.shopName}>
+            </button>
+            <h1
+              onClick={handleSecretLogoClick}
+              className="text-sm font-black text-slate-900 truncate tracking-tight flex-1 cursor-pointer select-none"
+              title={settings.shopName}
+            >
               {settings.shopName || 'JALAD PRINTERS & EMITRA CENTER CHIKHALI'}
             </h1>
           </div>
@@ -103,6 +110,17 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 shrink-0">
+              {/* User App Share Button - 1 Click Share */}
+              <button
+                type="button"
+                onClick={handleShareApp}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-bold transition shrink-0 cursor-pointer shadow-xs active:scale-95"
+                title="ग्राहक ऐप शेयर करें (Click to Share App)"
+              >
+                {copiedAppShare ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Share2 className="w-3.5 h-3.5 text-white" />}
+                <span>{copiedAppShare ? 'कॉपी हुआ ✓' : 'ऐप शेयर'}</span>
+              </button>
+
               <button
                 type="button"
                 onClick={onLanguageToggle}
@@ -110,7 +128,7 @@ export const Header: React.FC<HeaderProps> = ({
               >
                 {language === 'hi' ? 'EN' : 'हिन्दी'}
               </button>
-              {isAdmin ? (
+              {isAdmin && (
                 <button
                   type="button"
                   onClick={onOpenAdmin}
@@ -118,16 +136,6 @@ export const Header: React.FC<HeaderProps> = ({
                 >
                   <Shield className="w-3 h-3" />
                   <span>Exit Admin</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={onOpenAdmin}
-                  className="flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-bold transition bg-slate-900 hover:bg-slate-800 text-white shrink-0 shadow-xs"
-                  title="दुकानदार / एडमिन पैनल खोलें"
-                >
-                  <Store className="w-3 h-3 text-amber-400" />
-                  <span>दुकानदार</span>
                 </button>
               )}
             </div>
@@ -137,17 +145,26 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Desktop / Tablet View */}
         <div className="hidden sm:flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 to-indigo-600 text-white shadow-md shadow-blue-500/20 shrink-0">
+            <button
+              type="button"
+              onClick={handleSecretLogoClick}
+              className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-700 to-indigo-600 text-white shadow-md shadow-blue-500/20 shrink-0 cursor-pointer active:scale-95 transition"
+              title="Smart QR Print"
+            >
               <Printer className="w-5 h-5" />
               <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
               </span>
-            </div>
+            </button>
 
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-black tracking-tight text-slate-900 truncate" title={settings.shopName}>
+                <h1
+                  onClick={handleSecretLogoClick}
+                  className="text-base font-black tracking-tight text-slate-900 truncate cursor-pointer select-none"
+                  title={settings.shopName}
+                >
                   {settings.shopName || 'JALAD PRINTERS & EMITRA CENTER CHIKHALI'}
                 </h1>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
@@ -162,78 +179,39 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Desktop Actions */}
           <div className="flex items-center gap-2 shrink-0">
-            {/* 24x7 Owner Desktop Monitor Status Badge & Setup Button */}
-            {isOwnerDevice ? (
-              <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="text-[11px] font-bold text-emerald-800 hidden lg:inline">
-                  24x7 मॉनिटर सक्रिय
-                </span>
-                {onMinimizeToTray && (
-                  <button
-                    type="button"
-                    onClick={onMinimizeToTray}
-                    className="p-1 rounded-lg text-emerald-700 hover:bg-emerald-100 transition"
-                    title="बैकग्राउंड में मिनिमाइज करें"
-                  >
-                    <Minimize2 className="w-3 h-3" />
-                  </button>
-                )}
-                {onOpenDesktopSetup && (
-                  <button
-                    type="button"
-                    onClick={onOpenDesktopSetup}
-                    className="text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-0.5 rounded-md transition"
-                    title="Windows ऑटो-स्टार्ट सेटअप"
-                  >
-                    PC सेटअप
-                  </button>
-                )}
-              </div>
-            ) : (
-              onToggleOwnerDevice && (
-                <button
-                  type="button"
-                  onClick={onToggleOwnerDevice}
-                  className="hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-blue-200 bg-blue-50/80 hover:bg-blue-100 text-blue-700 text-xs font-bold transition shadow-2xs"
-                  title="दुकानदार 24x7 काउंटर मॉनिटर चालू करें ताकि नया ऑर्डर आते ही ऑटोमेटिक पॉपअप खुले"
-                >
-                  <Laptop className="w-3.5 h-3.5 text-blue-600" />
-                  <span>24x7 PC मॉनिटर ऑन करें</span>
-                </button>
-              )
-            )}
-
             <PWAInstallButton />
+            
+            {/* User App Share Button */}
+            <button
+              type="button"
+              onClick={handleShareApp}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition cursor-pointer shadow-sm active:scale-95"
+              title="ग्राहक ऐप शेयर करें (Click to Share App)"
+            >
+              {copiedAppShare ? <Check className="w-3.5 h-3.5 text-emerald-300" /> : <Share2 className="w-3.5 h-3.5 text-white" />}
+              <span>{copiedAppShare ? 'लिंक कॉपी हुआ ✓' : (language === 'hi' ? 'ऐप शेयर करें' : 'Share App')}</span>
+            </button>
+
             <button
               onClick={onOpenTracking}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-200 hover:border-slate-300 text-slate-700 text-xs font-semibold hover:bg-slate-50 transition cursor-pointer"
             >
               <Search className="w-3.5 h-3.5 text-slate-500" />
-              <span>Track Order</span>
+              <span>{language === 'hi' ? 'ऑर्डर ट्रैक करें' : 'Track Order'}</span>
             </button>
             <button
               onClick={onLanguageToggle}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition"
+              className="px-2.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold transition cursor-pointer"
             >
               {language === 'hi' ? 'EN' : 'हिन्दी'}
             </button>
-            {isAdmin ? (
+            {isAdmin && (
               <button
                 onClick={onOpenAdmin}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition bg-amber-600 text-white shadow-xs hover:bg-amber-700"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition bg-amber-600 text-white shadow-xs hover:bg-amber-700 cursor-pointer"
               >
                 <Shield className="w-3.5 h-3.5" />
                 <span>Exit Admin</span>
-              </button>
-            ) : (
-              <button
-                onClick={onOpenAdmin}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition bg-slate-900 text-white shadow-xs hover:bg-slate-800"
-                title="दुकानदार / एडमिन पैनल खोलें"
-              >
-                <Store className="w-3.5 h-3.5 text-amber-400" />
-                <span>दुकानदार पैनल (Owner)</span>
               </button>
             )}
           </div>

@@ -7,6 +7,7 @@ import {
   Volume2,
   Sun,
   ShieldCheck,
+  Shield,
   X,
   FileCode,
   Sparkles,
@@ -23,6 +24,7 @@ interface DesktopSetupModalProps {
   onClose: () => void;
   settings: ShopSettings;
   onActivateMinimizedMode?: () => void;
+  onOpenAdmin?: () => void;
 }
 
 export const DesktopSetupModal: React.FC<DesktopSetupModalProps> = ({
@@ -30,6 +32,7 @@ export const DesktopSetupModal: React.FC<DesktopSetupModalProps> = ({
   onClose,
   settings,
   onActivateMinimizedMode,
+  onOpenAdmin,
 }) => {
   const [copiedUrl, setCopiedUrl] = useState(false);
   const [soundTested, setSoundTested] = useState(false);
@@ -84,10 +87,10 @@ export const DesktopSetupModal: React.FC<DesktopSetupModalProps> = ({
           <div className="p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-emerald-300 space-y-1.5">
             <div className="flex items-center gap-2 font-black text-sm text-emerald-200">
               <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span>24x7 बैकग्राउंड एक्टिव & ऑटोमेटिक पॉपअप गारंटी</span>
+              <span>ब्राउज़र बंद होने पर भी 24x7 बैकग्राउंड ऑटो-पॉपअप गारंटी</span>
             </div>
             <p className="text-slate-300 text-[11px] leading-relaxed">
-              यह सेटअप आपके कंप्यूटर पर हमेशा बैकग्राउंड में मिनिमाइज रहेगा। जब भी कोई ग्राहक अपने मोबाइल से नकद (Cash) या ऑनलाइन UPI से प्रिंट ऑर्डर करेगा, तो कंप्यूटर की स्क्रीन पर <strong>तुरंत कैश/ऑनलाइन पॉपअप खुल जाएगा</strong> और घंटी बजेगी!
+              यह सेटअप आपके कंप्यूटर पर 24x7 बैकग्राउंड में चलेगा। <strong>चाहे आपका ब्राउज़र बंद (Closed) हो</strong>, जैसे ही कोई ग्राहक अपने मोबाइल से नकद (Cash) या ऑनलाइन UPI से प्रिंट ऑर्डर करेगा, कंप्यूटर स्क्रीन पर <strong>अलार्म के साथ सत्यापन पॉपअप तुरंत खुल जाएगा</strong>! एक बार सत्यापन करने के बाद पॉपअप बंद हो जाएगा और <strong>केवल अगले नए प्रिंट ऑर्डर पर ही खुलेगा</strong>।
             </p>
           </div>
 
@@ -103,10 +106,10 @@ export const DesktopSetupModal: React.FC<DesktopSetupModalProps> = ({
                   <Terminal className="w-4 h-4 text-blue-400" />
                 </div>
                 <h4 className="font-bold text-sm text-white">
-                  1. Windows 1-Click सेटअप (.bat)
+                  1. Windows 1-Click 24x7 सेटअप (.bat)
                 </h4>
                 <p className="text-slate-400 text-[11px] leading-relaxed">
-                  यह फाइल Windows Startup में ऑटो-स्टार्ट जोड़ देगी ताकि कंप्यूटर ऑन होते ही यह मॉनिटर मिनिमाइज होकर चालू रहे।
+                  डाउनलोड करके सिर्फ 1 बार रन करें। यह Windows Startup में 24x7 बैकग्राउंड मॉनिटर जोड़ देगा, जो ब्राउज़र बंद होने पर भी नया ऑर्डर आते ही पॉपअप खोलेगा।
                 </p>
               </div>
               <button
@@ -115,7 +118,7 @@ export const DesktopSetupModal: React.FC<DesktopSetupModalProps> = ({
                 className="w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-md shadow-blue-600/30 cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>.BAT सेटअप डाउनलोड करें</span>
+                <span>📥 .BAT 24x7 सेटअप डाउनलोड करें</span>
               </button>
             </div>
 
@@ -157,7 +160,7 @@ export const DesktopSetupModal: React.FC<DesktopSetupModalProps> = ({
               <button
                 type="button"
                 onClick={handleTestSound}
-                className="py-2.5 px-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-slate-600 text-slate-200 font-bold flex items-center justify-center gap-2 transition"
+                className="py-2.5 px-3 rounded-xl bg-slate-900 border border-slate-700 hover:border-slate-600 text-slate-200 font-bold flex items-center justify-center gap-2 transition cursor-pointer"
               >
                 <Volume2 className="w-4 h-4 text-amber-400" />
                 <span>{soundTested ? 'घंटी बजी ✓' : 'अलर्ट साउंड टेस्ट करें'}</span>
@@ -170,10 +173,24 @@ export const DesktopSetupModal: React.FC<DesktopSetupModalProps> = ({
                     onClose();
                     onActivateMinimizedMode();
                   }}
-                  className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center gap-2 transition"
+                  className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold flex items-center justify-center gap-2 transition cursor-pointer"
                 >
                   <Minimize2 className="w-4 h-4" />
                   <span>अभी मिनिमाइज मोड ऑन करें</span>
+                </button>
+              )}
+
+              {onOpenAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    onOpenAdmin();
+                  }}
+                  className="sm:col-span-2 py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 transition shadow-md cursor-pointer"
+                >
+                  <Shield className="w-4 h-4 text-slate-950" />
+                  <span>🔐 एडमिन पैनल खोलें (Open Store Owner Admin Panel)</span>
                 </button>
               )}
             </div>

@@ -81,7 +81,7 @@ function loadDB(): AppDatabase {
       colorSingleA3: 20.0,
       photo4x6: 25.0,
       passportSheet: 50.0,
-      minOrderAmount: 5.0,
+      minOrderAmount: 0.0,
       serviceCharge: 0.0,
     },
     printers: [
@@ -347,59 +347,105 @@ app.get('/api/setup/download/bat', (req: Request, res: Response) => {
   const host = req.get('host') || 'localhost:3000';
   const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
   const origin = `${protocol}://${host}`;
-  const targetUrl = `${origin}/?mode=owner&minimized=true&autostart=true`;
+  const targetUrl = `${origin}/?mode=admin&popup=true`;
+  const shopName = db.settings?.shopName || 'JALAD PRINTERS & EMITRA CENTER CHIKHALI';
 
   const batContent = `@echo off
 chcp 65001 >nul
 title Smart QR Print - Dukandar 24x7 Desktop Auto-Start Setup
-color 0B
+color 0A
+cls
 echo ======================================================================
-echo    SMART QR PRINT - DUKANDAR 24x7 DESKTOP AUTO-START INSTALLER
-echo    Dukan: ${db.settings?.shopName || 'JALAD PRINTERS & EMITRA CENTER CHIKHALI'}
+echo    SMART QR PRINT - DUKANDAR 24x7 DESKTOP AUTO-POPUP INSTALLER
+echo    Dukan: ${shopName}
 echo ======================================================================
 echo.
-echo [1/3] Setting up 24x7 Shopkeeper Background Monitor...
-echo Target Server URL: ${targetUrl}
-echo.
+echo [1/4] Creating 24x7 Background Daemon Directory...
+set "APP_DIR=%LOCALAPPDATA%\\SmartQRPrint"
+if not exist "%APP_DIR%" mkdir "%APP_DIR%"
 
-set "TARGET_URL=${targetUrl}"
+set "SERVER_URL=${origin}"
+set "TARGET_POPUP_URL=${targetUrl}"
 set "STARTUP_DIR=%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"
 set "DESKTOP_DIR=%USERPROFILE%\\Desktop"
-set "VBS_FILE=%STARTUP_DIR%\\SmartQRPrint-ShopMonitor.vbs"
-set "DESKTOP_VBS=%DESKTOP_DIR%\\SmartQRPrint-ShopMonitor.vbs"
 
-echo [2/3] Registering Windows Auto-Start Service (shell:startup)...
+echo [2/4] Generating 24x7 Smart Background Order Listener (PowerShell Daemon)...
+(
+  echo # Smart QR Print 24x7 Background Monitor Daemon
+  echo $Server = "${origin}"
+  echo $LastSeenFile = "$env:LOCALAPPDATA\\SmartQRPrint\\seen_orders.txt"
+  echo if (-not (Test-Path $LastSeenFile^)^) { New-Item -ItemType File -Path $LastSeenFile -Force ^| Out-Null }
+  echo.
+  echo Write-Output "Smart QR Print 24x7 Daemon Started: $Server"
+  echo.
+  echo while ($true^) {
+  echo     try {
+  echo         $resp = Invoke-RestMethod -Uri "$Server/api/orders" -Method Get -TimeoutSec 3 -ErrorAction SilentlyContinue
+  echo         if ($resp^) {
+  echo             $seen = Get-Content $LastSeenFile -ErrorAction SilentlyContinue
+  echo             $pending = @($resp^) ^| Where-Object {
+  echo                 ($_.paymentStatus -eq 'counter_pending' -or $_.paymentStatus -eq 'pending'^) -and
+  echo                 $_.printStatus -ne 'cancelled' -and
+  echo                 $_.paymentStatus -ne 'paid' -and
+  echo                 $seen -notcontains $_.id
+  echo             }
+  echo             if ($pending -and $pending.Count -gt 0^) {
+  echo                 $ord = $pending[0]
+  echo                 Add-Content -Path $LastSeenFile -Value $ord.id
+  echo.
+  echo                 # Loud chime sound
+  echo                 [System.Console]::Beep(1200, 250^)
+  echo                 [System.Console]::Beep(1600, 350^)
+  echo.
+  echo                 # Automatically Launch Desktop Satyapan Popup in Front!
+  echo                 $popUrl = "$Server/?mode=admin&popup=true&orderId=" + $ord.id
+  echo                 $edge1 = "C:\\Program Files (x86^)\\Microsoft\\Edge\\Application\\msedge.exe"
+  echo                 $edge2 = "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe"
+  echo                 $chrome = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+  echo                 $chrome86 = "C:\\Program Files (x86^)\\Google\\Chrome\\Application\\chrome.exe"
+  echo.
+  echo                 if (Test-Path $chrome^) {
+  echo                     Start-Process $chrome -ArgumentList "--app=\`"$popUrl\`" --window-size=540,750 --window-position=450,120"
+  echo                 } elseif (Test-Path $chrome86^) {
+  echo                     Start-Process $chrome86 -ArgumentList "--app=\`"$popUrl\`" --window-size=540,750 --window-position=450,120"
+  echo                 } elseif (Test-Path $edge1^) {
+  echo                     Start-Process $edge1 -ArgumentList "--app=\`"$popUrl\`" --window-size=540,750 --window-position=450,120"
+  echo                 } elseif (Test-Path $edge2^) {
+  echo                     Start-Process $edge2 -ArgumentList "--app=\`"$popUrl\`" --window-size=540,750 --window-position=450,120"
+  echo                 } else {
+  echo                     Start-Process "$popUrl"
+  echo                 }
+  echo             }
+  echo         }
+  echo     } catch {}
+  echo     Start-Sleep -Seconds 2
+  echo }
+) > "%APP_DIR%\\SmartQRPrint-Daemon.ps1"
+
+echo [3/4] Registering Windows Auto-Start Service (shell:startup)...
 (
   echo Set WshShell = CreateObject("WScript.Shell"^)
-  echo Dim browserCmd
-  echo If CreateObject("Scripting.FileSystemObject"^).FileExists("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"^) Then
-  echo     browserCmd = """C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"" --app=""" ^& "%TARGET_URL%" ^& """ --start-minimized"
-  echo ElseIf CreateObject("Scripting.FileSystemObject"^).FileExists("C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"^) Then
-  echo     browserCmd = """C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"" --app=""" ^& "%TARGET_URL%" ^& """ --start-minimized"
-  echo ElseIf CreateObject("Scripting.FileSystemObject"^).FileExists("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"^) Then
-  echo     browserCmd = """C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"" --app=""" ^& "%TARGET_URL%" ^& """ --start-minimized"
-  echo Else
-  echo     browserCmd = "cmd /c start """" """ ^& "%TARGET_URL%" ^& """"
-  echo End If
-  echo WshShell.Run browserCmd, 7, False
-) > "%VBS_FILE%"
+  echo Dim psCmd
+  echo psCmd = "powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File """ ^& "%APP_DIR%\\SmartQRPrint-Daemon.ps1"""
+  echo WshShell.Run psCmd, 0, False
+) > "%STARTUP_DIR%\\SmartQRPrint-ShopMonitor.vbs"
 
-echo [3/3] Creating Desktop Shortcut...
-copy /y "%VBS_FILE%" "%DESKTOP_VBS%" >nul
+copy /y "%STARTUP_DIR%\\SmartQRPrint-ShopMonitor.vbs" "%DESKTOP_DIR%\\SmartQRPrint-24x7-Monitor.vbs" >nul
+
+echo [4/4] Starting 24x7 Background Daemon Now...
+wscript.exe "%STARTUP_DIR%\\SmartQRPrint-ShopMonitor.vbs"
 
 echo.
 echo ======================================================================
-echo  [SUCCESS] 24x7 DESKTOP SHOPKEEPER MONITOR INSTALLED!
-echo  - Computer on hote hi background me monitor automatic chalega.
-echo  - Screen par minimize rahega.
-echo  - Jab bhi koi customer pay karega, turant Cash/Online popup khulega!
-echo  - Desktop par shortcut "SmartQRPrint-ShopMonitor.vbs" ready hai.
+echo  [SUCCESS] 24x7 DUKANDAR MONITOR SETUP COMPLETE!
+echo  ----------------------------------------------------------------------
+echo  1. Browser chahe band (closed) ho, monitor background me 24x7 chalega.
+echo  2. Mobile app se user jaise hi Pay karega, popup screen par khul jayega!
+echo  3. Satyapan karte hi printer se print nikalega aur popup band ho jayega.
+echo  4. Agle naye order par hi fir se popup khulega.
+echo  5. Computer restart hone par bhi yeh automatic background me start hoga.
 echo ======================================================================
 echo.
-echo Launching monitor now in background...
-wscript.exe "%VBS_FILE%"
-echo.
-echo Monitor is now ACTIVE! You can close this window.
 timeout /t 5
 `;
 
@@ -412,24 +458,12 @@ app.get('/api/setup/download/vbs', (req: Request, res: Response) => {
   const host = req.get('host') || 'localhost:3000';
   const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
   const origin = `${protocol}://${host}`;
-  const targetUrl = `${origin}/?mode=owner&minimized=true&autostart=true`;
 
   const vbsContent = `' Smart QR Print - Silent Background Auto-Start Script
 Set WshShell = CreateObject("WScript.Shell")
-Dim targetUrl, browserCmd
-targetUrl = "${targetUrl}"
-
-If CreateObject("Scripting.FileSystemObject").FileExists("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe") Then
-    browserCmd = """C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"" --app=""" & targetUrl & """ --start-minimized"
-ElseIf CreateObject("Scripting.FileSystemObject").FileExists("C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe") Then
-    browserCmd = """C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"" --app=""" & targetUrl & """ --start-minimized"
-ElseIf CreateObject("Scripting.FileSystemObject").FileExists("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe") Then
-    browserCmd = """C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"" --app=""" & targetUrl & """ --start-minimized"
-Else
-    browserCmd = "cmd /c start """" """ & targetUrl & """"
-End If
-
-WshShell.Run browserCmd, 7, False
+Dim psCmd
+psCmd = "powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -Command ""$Server='${origin}'; $LastSeenFile='$env:LOCALAPPDATA\\SmartQRPrint\\seen_orders.txt'; while($true){ try{ $resp = Invoke-RestMethod -Uri '$Server/api/orders' -TimeoutSec 3; $seen = Get-Content $LastSeenFile -ErrorAction SilentlyContinue; $pending = @($resp) | Where-Object { ($_.paymentStatus -eq 'counter_pending' -or $_.paymentStatus -eq 'pending') -and $_.printStatus -ne 'cancelled' -and $_.paymentStatus -ne 'paid' -and $seen -notcontains $_.id }; if($pending -and $pending.Count -gt 0){ $ord = $pending[0]; Add-Content -Path $LastSeenFile -Value $ord.id; [System.Console]::Beep(1400,300); Start-Process 'msedge.exe' -ArgumentList '--app=\""$Server/?mode=admin&popup=true&orderId=' + $ord.id + '\"" --window-size=540,750'; } }catch{} Start-Sleep -Seconds 2 }"""
+WshShell.Run psCmd, 0, False
 `;
 
   res.setHeader('Content-Type', 'text/vbscript');

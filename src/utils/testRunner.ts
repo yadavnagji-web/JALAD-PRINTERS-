@@ -187,7 +187,7 @@ export async function runAutomatedTestSuite(
     const priceRes = calculateItemPrice(dummyDoc, cfgBw, DEFAULT_PRICING);
     if (priceRes.total !== 8) throw new Error(`Expected ₹8, got ₹${priceRes.total}`);
 
-    // Duplex Color A4: 2 pages * 1 copy * ₹18 = ₹36
+    // Duplex Color A4: 2 pages (1 sheet both sides) * 1 copy * ₹18 = ₹18
     const cfgDuplexColor: PrintJobConfig = {
       ...cfgBw,
       copies: 1,
@@ -195,7 +195,7 @@ export async function runAutomatedTestSuite(
       duplex: true,
     };
     const priceDuplex = calculateItemPrice(dummyDoc, cfgDuplexColor, DEFAULT_PRICING);
-    if (priceDuplex.total !== 36) throw new Error(`Expected ₹36 for Duplex Color, got ₹${priceDuplex.total}`);
+    if (priceDuplex.total !== 18) throw new Error(`Expected ₹18 for Duplex Color (1 sheet), got ₹${priceDuplex.total}`);
 
     record(9, 'Pricing Calculations (INR)', 'Billing Engine', 'passed', Math.round(performance.now() - t9), 'Exact calculation verified for single, duplex, copies, and colour modes.');
   } catch (err: any) {

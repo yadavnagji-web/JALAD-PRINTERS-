@@ -88,9 +88,26 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState<AdminTab>('dashboard');
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true); // default true for owner in session
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('sqp_admin_auth') === 'Nagji@012';
+    }
+    return false;
+  });
   const [passwordInput, setPasswordInput] = useState('');
   const [authError, setAuthError] = useState('');
+
+  const handleAdminAuthSubmit = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const clean = passwordInput.trim();
+    if (clean === 'Nagji@012' || clean === 'nagji@012') {
+      setIsAuthenticated(true);
+      setAuthError('');
+      sessionStorage.setItem('sqp_admin_auth', 'Nagji@012');
+    } else {
+      setAuthError('गलत पासवर्ड! कृपया सही पासवर्ड दर्ज करें।');
+    }
+  };
 
   // Local state for tabs
   const [settingsForm, setSettingsForm] = useState<ShopSettings>(initialSettings);
@@ -422,6 +439,71 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const pendingJobs = orders.filter((o) => o.printStatus === 'queued' || o.printStatus === 'downloading').length;
   const completedJobs = orders.filter((o) => o.printStatus === 'completed').length;
   const failedJobs = orders.filter((o) => o.printStatus === 'failed').length;
+
+  // Secret Password Gate: Password-Nagji@012 lagao jo secret rahe
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl max-w-sm w-full p-6 sm:p-8 shadow-2xl space-y-6 relative animate-in zoom-in-95">
+          <div className="text-center space-y-2">
+            <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/30 text-amber-500 rounded-2xl mx-auto flex items-center justify-center shadow-lg">
+              <Lock className="w-8 h-8" />
+            </div>
+            <h3 className="text-xl font-black text-white">
+              एडमिन डेस्कटॉप सिस्टम लॉगिन
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              सुरक्षित एडमिन पैनल व 24x7 ऑटो-प्रिंट स्पूलर के लिए गोपनीय पासवर्ड दर्ज करें।
+            </p>
+          </div>
+
+          <form onSubmit={handleAdminAuthSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <Lock className="w-3.5 h-3.5 text-amber-400" />
+                <span>गोपनीय पासवर्ड (Secret Password)</span>
+              </label>
+              <input
+                type="password"
+                autoFocus
+                placeholder="पासवर्ड दर्ज करें..."
+                value={passwordInput}
+                onChange={(e) => {
+                  setPasswordInput(e.target.value);
+                  if (authError) setAuthError('');
+                }}
+                className={`w-full px-4 py-3 rounded-xl border text-center font-mono text-base font-bold outline-none transition ${
+                  authError
+                    ? 'border-red-500 bg-red-950/30 text-red-200 focus:ring-2 focus:ring-red-500'
+                    : 'border-slate-700 bg-slate-950 text-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+                }`}
+              />
+              {authError && (
+                <p className="text-[11px] text-red-400 font-bold text-center mt-1">
+                  {authError}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+            >
+              <span>एडमिन पैनल अनलॉक करें (Unlock)</span>
+            </button>
+          </form>
+
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full py-2.5 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 text-xs font-semibold transition"
+          >
+            ← ग्राहक ऐप पर वापस जाएं (Back)
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // If Minimized Mode is active on Desktop:
   if (isMinimized) {

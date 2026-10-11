@@ -230,20 +230,41 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
             </div>
 
             {/* Quick Actions */}
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <button
                 type="button"
                 onClick={() => window.print()}
-                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-bold transition"
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 rounded-xl border border-slate-300 hover:bg-slate-50 text-slate-800 text-xs font-bold transition cursor-pointer"
               >
                 <Download className="w-4 h-4" />
-                <span>रसीद प्रिंट / डाउनलोड (Print Receipt)</span>
+                <span>रसीद प्रिंट / डाउनलोड</span>
               </button>
+
+              {currentOrder.printStatus !== 'completed' && currentOrder.printStatus !== 'cancelled' && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await api.updateOrderStatus(currentOrder.id, {
+                        printStatus: 'cancelled',
+                        paymentStatus: 'failed',
+                        failureReason: 'ग्राहक द्वारा ट्रैकिंग से रद्द किया गया',
+                      });
+                      setCurrentOrder((prev) => prev ? { ...prev, printStatus: 'cancelled', paymentStatus: 'failed' } : null);
+                    } catch {}
+                  }}
+                  className="px-4 py-2.5 rounded-xl border border-rose-300 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                  <span>ऑर्डर रद्द करें (Cancel)</span>
+                </button>
+              )}
+
               <a
                 href={`https://wa.me/${settings.whatsappNumber.replace(/[^0-9]/g, '')}?text=Order%20${currentOrder.orderNumber}%20Status`}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition"
+                className="flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition"
               >
                 <span>WhatsApp सहायता</span>
               </a>
