@@ -22,6 +22,9 @@ import { ShopkeeperRegistrationModal } from './components/ShopkeeperRegistration
 import { AdminPanel } from './components/AdminPanel';
 import { OwnerPaymentApprovalModal } from './components/OwnerPaymentApprovalModal';
 import { OwnerLoginModal } from './components/OwnerLoginModal';
+import { DesktopSetupModal } from './components/DesktopSetupModal';
+import { OwnerBackgroundMonitor } from './components/OwnerBackgroundMonitor';
+import { playOrderChime } from './utils/audioAlert';
 import { calculateOrderTotal } from './utils/pricing';
 import {
   ArrowRight,
@@ -64,11 +67,27 @@ export default function App() {
   const [isOwnerShareModalOpen, setIsOwnerShareModalOpen] = useState(false);
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
   const [isOwnerLoginModalOpen, setIsOwnerLoginModalOpen] = useState(false);
+  const [isDesktopSetupOpen, setIsDesktopSetupOpen] = useState(false);
   const [isOwnerDevice, setIsOwnerDevice] = useState(() => {
     if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
       return (
+        params.get('mode') === 'owner' ||
+        params.get('mode') === 'desktop' ||
+        params.get('desktop') === 'true' ||
         localStorage.getItem('sqp_is_owner_device') === 'true' ||
         localStorage.getItem('sqp_auto_start') === 'true' ||
+        localStorage.getItem('sqp_owner_minimized') === 'true'
+      );
+    }
+    return false;
+  });
+
+  const [isOwnerMinimizedView, setIsOwnerMinimizedView] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return (
+        params.get('minimized') === 'true' ||
         localStorage.getItem('sqp_owner_minimized') === 'true'
       );
     }
@@ -94,6 +113,9 @@ export default function App() {
           localStorage.getItem('sqp_auto_start') === 'true'
         ) {
           setIsAdminOpen(true);
+        }
+        if (params.get('minimized') === 'true' || localStorage.getItem('sqp_owner_minimized') === 'true') {
+          setIsOwnerMinimizedView(true);
         }
         if (params.get('mode') === 'new_shopkeeper' || params.get('join') === 'shopkeeper') {
           setIsRegistrationModalOpen(true);
@@ -226,6 +248,41 @@ export default function App() {
     setIsOwnerLoginModalOpen(true);
   };
 
+  // 24x7 Minimized Shopkeeper Background Monitor View (Runs 24x7 on Desktop)
+  if (isOwnerMinimizedView) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between selection:bg-blue-600 selection:text-white">
+        <OwnerBackgroundMonitor
+          settings={settings}
+          onMaximize={() => {
+            setIsOwnerMinimizedView(false);
+            localStorage.setItem('sqp_owner_minimized', 'false');
+            setIsAdminOpen(true);
+          }}
+          onExit={() => {
+            setIsOwnerMinimizedView(false);
+            localStorage.setItem('sqp_owner_minimized', 'false');
+          }}
+        />
+
+        {/* 24x7 Instant Payment Popup Modal (Loud Audio Chime & Verification) */}
+        <OwnerPaymentApprovalModal
+          onOrderApproved={(order) => {
+            if (trackingOrder && trackingOrder.id === order.id) {
+              setTrackingOrder(order);
+            }
+          }}
+        />
+
+        <DesktopSetupModal
+          isOpen={isDesktopSetupOpen}
+          onClose={() => setIsDesktopSetupOpen(false)}
+          settings={settings}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
       {/* Header */}
@@ -242,6 +299,18 @@ export default function App() {
           }
         }}
         isAdmin={isAdminOpen}
+        isOwnerDevice={isOwnerDevice}
+        onToggleOwnerDevice={() => {
+          const next = !isOwnerDevice;
+          setIsOwnerDevice(next);
+          localStorage.setItem('sqp_is_owner_device', next ? 'true' : 'false');
+          if (next) playOrderChime();
+        }}
+        onOpenDesktopSetup={() => setIsDesktopSetupOpen(true)}
+        onMinimizeToTray={() => {
+          setIsOwnerMinimizedView(true);
+          localStorage.setItem('sqp_owner_minimized', 'true');
+        }}
       />
 
       {/* 
@@ -600,6 +669,17 @@ export default function App() {
           setIsAdminOpen(true);
           localStorage.setItem('sqp_is_owner_device', 'true');
           setIsOwnerDevice(true);
+        }}
+      />
+
+      {/* 8. Desktop 24x7 Auto-Start Setup Modal */}
+      <DesktopSetupModal
+        isOpen={isDesktopSetupOpen}
+        onClose={() => setIsDesktopSetupOpen(false)}
+        settings={settings}
+        onActivateMinimizedMode={() => {
+          setIsOwnerMinimizedView(true);
+          localStorage.setItem('sqp_owner_minimized', 'true');
         }}
       />
 

@@ -18,6 +18,7 @@ import { CustomerOrder } from '../types';
 import { api } from '../services/api';
 import { playOrderChime } from '../utils/audioAlert';
 import { requestScreenWakeLock, releaseScreenWakeLock } from '../utils/wakeLock';
+import { autoPrintOrder } from '../utils/silentPrinter';
 
 interface OwnerPaymentApprovalModalProps {
   onOrderApproved?: (order: CustomerOrder) => void;
@@ -31,9 +32,11 @@ export const OwnerPaymentApprovalModal: React.FC<OwnerPaymentApprovalModalProps>
   const [dismissedOrderIds, setDismissedOrderIds] = useState<Set<string>>(new Set());
   const lastAlertedOrderId = useRef<string | null>(null);
 
-  // Poll for orders awaiting approval every 1.2 seconds for instant popup response
+  // Poll and SSE for orders awaiting approval for instant popup response
   useEffect(() => {
     let isMounted = true;
+    let eventSource: EventSource | null = null;
+
     const checkPending = async () => {
       try {
         const allOrders = await api.getOrders();
@@ -52,9 +55,28 @@ export const OwnerPaymentApprovalModal: React.FC<OwnerPaymentApprovalModalProps>
 
     checkPending();
     const interval = setInterval(checkPending, 1200);
+
+    // Live Server-Sent Events for 0ms latency desktop popup
+    if (typeof EventSource !== 'undefined') {
+      try {
+        eventSource = new EventSource('/api/orders/live');
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'order_created' || data.type === 'order_updated' || data.type === 'order_approved') {
+              if (isMounted) checkPending();
+            }
+          } catch {}
+        };
+      } catch {}
+    }
+
     return () => {
       isMounted = false;
       clearInterval(interval);
+      if (eventSource) {
+        eventSource.close();
+      }
     };
   }, [dismissedOrderIds]);
 
@@ -135,6 +157,7 @@ export const OwnerPaymentApprovalModal: React.FC<OwnerPaymentApprovalModalProps>
         currentOrder.paymentTxnId || undefined
       );
       if (approved) {
+        autoPrintOrder(approved);
         setPendingOrders((prev) => prev.filter((o) => o.id !== currentOrder.id));
         if (onOrderApproved) onOrderApproved(approved);
       }

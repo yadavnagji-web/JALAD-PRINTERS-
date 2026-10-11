@@ -60,6 +60,8 @@ export const OrderSummaryCheckout: React.FC<OrderSummaryCheckoutProps> = ({
   const [isAwaitingApproval, setIsAwaitingApproval] = useState(false);
   const [awaitingOrder, setAwaitingOrder] = useState<CustomerOrder | null>(null);
   const [isCashOrOnlineModalOpen, setIsCashOrOnlineModalOpen] = useState(false);
+  const [cashModalInitialMethod, setCashModalInitialMethod] = useState<'upi' | 'cash'>('upi');
+  const [cashModalAutoSubmit, setCashModalAutoSubmit] = useState<boolean>(false);
 
   // Poll for owner approval when waiting for QR or Cash approval
   useEffect(() => {
@@ -335,7 +337,11 @@ export const OrderSummaryCheckout: React.FC<OrderSummaryCheckoutProps> = ({
 
         <button
           type="button"
-          onClick={() => setIsCashOrOnlineModalOpen(true)}
+          onClick={() => {
+            setCashModalInitialMethod('upi');
+            setCashModalAutoSubmit(false);
+            setIsCashOrOnlineModalOpen(true);
+          }}
           className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-sm sm:text-base shadow-lg shadow-black/20 active:scale-95 transition flex items-center justify-center gap-2 shrink-0 cursor-pointer"
         >
           <CreditCard className="w-5 h-5 text-slate-900" />
@@ -667,7 +673,11 @@ export const OrderSummaryCheckout: React.FC<OrderSummaryCheckoutProps> = ({
           <div className="p-4 bg-amber-50/90 rounded-2xl border border-amber-200 text-center space-y-3">
             <button
               type="button"
-              onClick={() => setIsCashOrOnlineModalOpen(true)}
+              onClick={() => {
+                setCashModalInitialMethod('cash');
+                setCashModalAutoSubmit(true);
+                setIsCashOrOnlineModalOpen(true);
+              }}
               className="w-full sm:w-auto px-8 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-sm font-bold shadow-md transition inline-flex items-center justify-center gap-2 cursor-pointer"
             >
               <Receipt className="w-4 h-4" />
@@ -727,6 +737,8 @@ export const OrderSummaryCheckout: React.FC<OrderSummaryCheckoutProps> = ({
         settings={settings}
         pricing={pricing}
         language={language}
+        initialMethod={cashModalInitialMethod}
+        autoSubmitCash={cashModalAutoSubmit}
         onOrderCompleted={(order) => {
           setIsCashOrOnlineModalOpen(false);
           onOrderCompleted(order);

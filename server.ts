@@ -218,12 +218,45 @@ app.post('/api/upload', upload.single('file'), (req: Request, res: Response) => 
   res.json(doc);
 });
 
+// Live SSE Broadcast for Instant Desktop Popups
+const sseClients = new Set<Response>();
+
+function broadcastOrderEvent(type: string, data: any) {
+  const payload = `data: ${JSON.stringify({ type, data, timestamp: Date.now() })}\n\n`;
+  for (const client of Array.from(sseClients)) {
+    try {
+      client.write(payload);
+    } catch {
+      sseClients.delete(client);
+    }
+  }
+}
+
+app.get('/api/orders/live', (req: Request, res: Response) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  if (typeof (res as any).flushHeaders === 'function') {
+    (res as any).flushHeaders();
+  }
+
+  sseClients.add(res);
+  res.write(`data: ${JSON.stringify({ type: 'connected', timestamp: Date.now() })}\n\n`);
+
+  req.on('close', () => {
+    sseClients.delete(res);
+  });
+});
+
 // 5. Orders API
 app.get('/api/orders', (_req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.json(db.orders);
 });
 
 app.get('/api/orders/:id', (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   const order = db.orders.find(o => o.id === req.params.id || o.orderNumber === req.params.id);
   if (!order) return res.status(404).json({ error: 'Order not found' });
   res.json(order);
@@ -233,6 +266,7 @@ app.post('/api/orders', (req: Request, res: Response) => {
   const order = req.body;
   db.orders.unshift(order);
   saveDB();
+  broadcastOrderEvent('order_created', order);
   res.json(order);
 });
 
@@ -241,6 +275,7 @@ app.patch('/api/orders/:id', (req: Request, res: Response) => {
   if (idx === -1) return res.status(404).json({ error: 'Order not found' });
   db.orders[idx] = { ...db.orders[idx], ...req.body };
   saveDB();
+  broadcastOrderEvent('order_updated', db.orders[idx]);
   res.json(db.orders[idx]);
 });
 
@@ -264,6 +299,7 @@ app.post('/api/payments/verify', (req: Request, res: Response) => {
   order.verifiedHashMatch = true;
 
   saveDB();
+  broadcastOrderEvent('order_approved', order);
   res.json(order);
 });
 
@@ -302,7 +338,267 @@ app.post('/api/orders/:id/approve-payment', (req: Request, res: Response) => {
   });
 
   saveDB();
+  broadcastOrderEvent('order_approved', order);
   res.json(order);
+});
+
+// 6c. Desktop Auto-Start & Minimized Setup Files Download Endpoints
+app.get('/api/setup/download/bat', (req: Request, res: Response) => {
+  const host = req.get('host') || 'localhost:3000';
+  const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+  const origin = `${protocol}://${host}`;
+  const targetUrl = `${origin}/?mode=owner&minimized=true&autostart=true`;
+
+  const batContent = `@echo off
+chcp 65001 >nul
+title Smart QR Print - Dukandar 24x7 Desktop Auto-Start Setup
+color 0B
+echo ======================================================================
+echo    SMART QR PRINT - DUKANDAR 24x7 DESKTOP AUTO-START INSTALLER
+echo    Dukan: ${db.settings?.shopName || 'JALAD PRINTERS & EMITRA CENTER CHIKHALI'}
+echo ======================================================================
+echo.
+echo [1/3] Setting up 24x7 Shopkeeper Background Monitor...
+echo Target Server URL: ${targetUrl}
+echo.
+
+set "TARGET_URL=${targetUrl}"
+set "STARTUP_DIR=%APPDATA%\\Microsoft\\Windows\\Start Menu\\Programs\\Startup"
+set "DESKTOP_DIR=%USERPROFILE%\\Desktop"
+set "VBS_FILE=%STARTUP_DIR%\\SmartQRPrint-ShopMonitor.vbs"
+set "DESKTOP_VBS=%DESKTOP_DIR%\\SmartQRPrint-ShopMonitor.vbs"
+
+echo [2/3] Registering Windows Auto-Start Service (shell:startup)...
+(
+  echo Set WshShell = CreateObject("WScript.Shell"^)
+  echo Dim browserCmd
+  echo If CreateObject("Scripting.FileSystemObject"^).FileExists("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"^) Then
+  echo     browserCmd = """C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"" --app=""" ^& "%TARGET_URL%" ^& """ --start-minimized"
+  echo ElseIf CreateObject("Scripting.FileSystemObject"^).FileExists("C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"^) Then
+  echo     browserCmd = """C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"" --app=""" ^& "%TARGET_URL%" ^& """ --start-minimized"
+  echo ElseIf CreateObject("Scripting.FileSystemObject"^).FileExists("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"^) Then
+  echo     browserCmd = """C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"" --app=""" ^& "%TARGET_URL%" ^& """ --start-minimized"
+  echo Else
+  echo     browserCmd = "cmd /c start """" """ ^& "%TARGET_URL%" ^& """"
+  echo End If
+  echo WshShell.Run browserCmd, 7, False
+) > "%VBS_FILE%"
+
+echo [3/3] Creating Desktop Shortcut...
+copy /y "%VBS_FILE%" "%DESKTOP_VBS%" >nul
+
+echo.
+echo ======================================================================
+echo  [SUCCESS] 24x7 DESKTOP SHOPKEEPER MONITOR INSTALLED!
+echo  - Computer on hote hi background me monitor automatic chalega.
+echo  - Screen par minimize rahega.
+echo  - Jab bhi koi customer pay karega, turant Cash/Online popup khulega!
+echo  - Desktop par shortcut "SmartQRPrint-ShopMonitor.vbs" ready hai.
+echo ======================================================================
+echo.
+echo Launching monitor now in background...
+wscript.exe "%VBS_FILE%"
+echo.
+echo Monitor is now ACTIVE! You can close this window.
+timeout /t 5
+`;
+
+  res.setHeader('Content-Type', 'application/x-bat');
+  res.setHeader('Content-Disposition', 'attachment; filename="SmartQRPrint-ShopMonitor-Setup.bat"');
+  res.send(batContent);
+});
+
+app.get('/api/setup/download/vbs', (req: Request, res: Response) => {
+  const host = req.get('host') || 'localhost:3000';
+  const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+  const origin = `${protocol}://${host}`;
+  const targetUrl = `${origin}/?mode=owner&minimized=true&autostart=true`;
+
+  const vbsContent = `' Smart QR Print - Silent Background Auto-Start Script
+Set WshShell = CreateObject("WScript.Shell")
+Dim targetUrl, browserCmd
+targetUrl = "${targetUrl}"
+
+If CreateObject("Scripting.FileSystemObject").FileExists("C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe") Then
+    browserCmd = """C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"" --app=""" & targetUrl & """ --start-minimized"
+ElseIf CreateObject("Scripting.FileSystemObject").FileExists("C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe") Then
+    browserCmd = """C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe"" --app=""" & targetUrl & """ --start-minimized"
+ElseIf CreateObject("Scripting.FileSystemObject").FileExists("C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe") Then
+    browserCmd = """C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe"" --app=""" & targetUrl & """ --start-minimized"
+Else
+    browserCmd = "cmd /c start """" """ & targetUrl & """"
+End If
+
+WshShell.Run browserCmd, 7, False
+`;
+
+  res.setHeader('Content-Type', 'text/vbscript');
+  res.setHeader('Content-Disposition', 'attachment; filename="SmartQRPrint-ShopMonitor.vbs"');
+  res.send(vbsContent);
+});
+
+app.get('/api/setup/download/widget', (req: Request, res: Response) => {
+  const host = req.get('host') || 'localhost:3000';
+  const protocol = req.protocol === 'https' || req.get('x-forwarded-proto') === 'https' ? 'https' : 'http';
+  const origin = `${protocol}://${host}`;
+
+  const htmlContent = `<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart QR Print - 24x7 Desktop Widget</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; padding: 16px; height: 100vh; display: flex; flex-direction: column; justify-content: space-between; overflow: hidden; }
+    .header { display: flex; align-items: center; justify-content: space-between; padding-bottom: 12px; border-bottom: 1px solid #1e293b; }
+    .badge { background: #064e3b; color: #34d399; font-size: 11px; padding: 4px 8px; border-radius: 999px; font-weight: bold; display: flex; align-items: center; gap: 6px; }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: #10b981; animation: pulse 1.5s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.2); } }
+    .main { text-align: center; margin: auto; max-width: 420px; }
+    .icon { width: 64px; height: 64px; background: rgba(59, 130, 246, 0.15); border: 2px solid #3b82f6; border-radius: 20px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center; font-size: 32px; }
+    h2 { font-size: 18px; font-weight: 800; margin-bottom: 8px; }
+    p { font-size: 12px; color: #94a3b8; line-height: 1.5; margin-bottom: 16px; }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 12px; }
+    .stat-card { background: #1e293b; padding: 10px; border-radius: 12px; border: 1px solid #334155; }
+    .stat-val { font-weight: bold; color: #38bdf8; font-size: 14px; margin-top: 4px; }
+    .footer { text-align: center; font-size: 11px; color: #64748b; padding-top: 10px; border-top: 1px solid #1e293b; }
+    /* Popup Overlay */
+    #popupModal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(4px); z-index: 1000; align-items: center; justify-content: center; padding: 16px; }
+    .modal-box { background: #ffffff; color: #0f172a; width: 100%; max-width: 440px; border-radius: 24px; padding: 24px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); }
+    .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 16px; }
+    .btn { padding: 12px; border-radius: 14px; font-weight: bold; border: none; cursor: pointer; font-size: 13px; }
+    .btn-green { background: #059669; color: white; }
+    .btn-blue { background: #2563eb; color: white; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div style="font-weight: 800; font-size: 13px;">🏪 Smart QR Print — Desktop Monitor</div>
+    <div class="badge"><div class="dot"></div> 24x7 Active</div>
+  </div>
+
+  <div class="main">
+    <div class="icon">🖨️</div>
+    <h2>सिस्टम नए ऑर्डर्स के लिए तैयार है</h2>
+    <p>यह विंडो बैकग्राउंड में मिनिमाइज रखें। जब भी कोई ग्राहक मोबाइल से कैश या ऑनलाइन भुगतान करेगा, स्क्रीन पर तुरंत अलर्ट पॉपअप खुल जाएगा।</p>
+    <div class="stats">
+      <div class="stat-card">
+        <div>सर्वर कनेक्शन</div>
+        <div class="stat-val" id="serverStatus" style="color: #34d399;">ऑनलाइन (Connected)</div>
+      </div>
+      <div class="stat-card">
+        <div>पेंडिंग ऑर्डर्स</div>
+        <div class="stat-val" id="pendingCount">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    दुकान: ${db.settings?.shopName || 'JALAD PRINTERS'} • ऑटो-स्पूलर चालू
+  </div>
+
+  <!-- Audio Chime -->
+  <audio id="orderChime" preload="auto">
+    <source src="${origin}/audio/chime.mp3" type="audio/mpeg">
+  </audio>
+
+  <!-- Approval Popup -->
+  <div id="popupModal">
+    <div class="modal-box">
+      <div style="font-size: 40px; margin-bottom: 8px;">🔔</div>
+      <div style="font-size: 11px; background: #fef3c7; color: #92400e; padding: 4px 10px; border-radius: 99px; display: inline-block; font-weight: bold;">नया प्रिंट ऑर्डर आया!</div>
+      <h3 id="modalOrderNum" style="font-size: 18px; margin-top: 8px; font-weight: 800;">ऑर्डर #...</h3>
+      <div id="modalAmount" style="font-size: 24px; font-weight: 900; color: #2563eb; margin: 6px 0;">₹0.00</div>
+      <p id="modalMethod" style="color: #64748b; font-size: 12px;">काउंटर पर पुष्टि करें</p>
+      <div class="btn-grid">
+        <button class="btn btn-green" id="btnOnline">✓ Online UPI मिला</button>
+        <button class="btn btn-blue" id="btnCash">💵 नकद Cash मिला</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SERVER_URL = '${origin}';
+    let currentPendingOrder = null;
+
+    function playSound() {
+      try {
+        const audio = new AudioContext();
+        const osc = audio.createOscillator();
+        const gain = audio.createGain();
+        osc.connect(gain);
+        gain.connect(audio.destination);
+        osc.frequency.setValueAtTime(587.33, audio.currentTime);
+        osc.frequency.setValueAtTime(880, audio.currentTime + 0.15);
+        gain.gain.setValueAtTime(0.4, audio.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audio.currentTime + 0.6);
+        osc.start();
+        osc.stop(audio.currentTime + 0.6);
+      } catch (e) {}
+    }
+
+    async function checkOrders() {
+      try {
+        const res = await fetch(SERVER_URL + '/api/orders?_t=' + Date.now(), { cache: 'no-store' });
+        if (res.ok) {
+          const orders = await res.json();
+          const pending = orders.filter(o => (o.paymentStatus === 'counter_pending' || o.paymentStatus === 'pending') && o.printStatus !== 'cancelled');
+          document.getElementById('pendingCount').innerText = pending.length;
+          if (pending.length > 0 && (!currentPendingOrder || currentPendingOrder.id !== pending[0].id)) {
+            currentPendingOrder = pending[0];
+            showPopup(currentPendingOrder);
+          } else if (pending.length === 0) {
+            currentPendingOrder = null;
+            document.getElementById('popupModal').style.display = 'none';
+          }
+        }
+      } catch (e) {}
+    }
+
+    function showPopup(order) {
+      playSound();
+      document.getElementById('modalOrderNum').innerText = 'ऑर्डर #' + order.orderNumber;
+      document.getElementById('modalAmount').innerText = '₹' + order.totalAmount.toFixed(2);
+      document.getElementById('modalMethod').innerText = order.paymentMethod === 'counter_cash' ? 'काउंटर नकद (Cash)' : 'ऑनलाइन UPI';
+      document.getElementById('popupModal').style.display = 'flex';
+    }
+
+    async function approve(method) {
+      if (!currentPendingOrder) return;
+      try {
+        await fetch(SERVER_URL + '/api/orders/' + currentPendingOrder.id + '/approve-payment', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ method, operator: 'Desktop Widget' })
+        });
+        document.getElementById('popupModal').style.display = 'none';
+        currentPendingOrder = null;
+        checkOrders();
+      } catch (e) {}
+    }
+
+    document.getElementById('btnOnline').onclick = () => approve('online');
+    document.getElementById('btnCash').onclick = () => approve('cash');
+
+    checkOrders();
+    setInterval(checkOrders, 1200);
+
+    // SSE connection
+    try {
+      const sse = new EventSource(SERVER_URL + '/api/orders/live');
+      sse.onmessage = (e) => {
+        const d = JSON.parse(e.data);
+        if (d.type === 'order_created' || d.type === 'order_updated') checkOrders();
+      };
+    } catch (e) {}
+  </script>
+</body>
+</html>`;
+
+  res.setHeader('Content-Type', 'text/html');
+  res.setHeader('Content-Disposition', 'attachment; filename="SmartQRPrint-Desktop-Widget.html"');
+  res.send(htmlContent);
 });
 
 // 7. Payment Webhook (Razorpay / Cashfree) with Idempotency

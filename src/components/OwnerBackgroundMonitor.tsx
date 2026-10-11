@@ -12,6 +12,7 @@ import {
   Shield,
   HelpCircle,
   X,
+  Download,
 } from 'lucide-react';
 import { ShopSettings } from '../types';
 import { playOrderChime } from '../utils/audioAlert';
@@ -230,6 +231,34 @@ export const OwnerBackgroundMonitor: React.FC<OwnerBackgroundMonitorProps> = ({
             </div>
 
             <div className="space-y-3 text-xs leading-relaxed text-slate-300">
+              <div className="p-3.5 bg-slate-950 rounded-xl border border-slate-800 space-y-2">
+                <div className="flex items-center justify-between">
+                  <strong className="text-white block font-bold text-xs">⚡ Windows 1-Click ऑटो-स्टार्ट इंस्टालर:</strong>
+                  <span className="text-[10px] bg-emerald-950 text-emerald-400 px-2 py-0.5 rounded font-bold">24x7 Active</span>
+                </div>
+                <p className="text-[11px] text-slate-400">
+                  नीचे दिए गए बटन पर क्लिक करके <code className="text-blue-400">.bat</code> फाइल डाउनलोड करें और एक बार चलाएं।
+                </p>
+                <div className="flex gap-2 pt-1">
+                  <a
+                    href="/api/setup/download/bat"
+                    download="SmartQRPrint-ShopMonitor-Setup.bat"
+                    className="flex-1 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-center text-xs flex items-center justify-center gap-1.5 transition"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>.BAT डाउनलोड करें (1-क्लिक)</span>
+                  </a>
+                  <a
+                    href="/api/setup/download/widget"
+                    download="SmartQRPrint-Desktop-Widget.html"
+                    className="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>HTML विजेट</span>
+                  </a>
+                </div>
+              </div>
+
               <div className="p-3 bg-slate-950 rounded-xl border border-slate-800 space-y-1.5">
                 <strong className="text-white block font-bold">1. डायरेक्ट ऑटो-स्टार्ट URL:</strong>
                 <div className="flex items-center gap-2">

@@ -1,5 +1,16 @@
 import React from 'react';
-import { Printer, Shield, Search, Phone, MessageSquare, Clock, Store } from 'lucide-react';
+import {
+  Printer,
+  Shield,
+  Search,
+  Phone,
+  MessageSquare,
+  Clock,
+  Store,
+  Laptop,
+  Minimize2,
+  CheckCircle2,
+} from 'lucide-react';
 import { ShopSettings } from '../types';
 import { PWAInstallButton } from './PWAInstallButton';
 
@@ -10,6 +21,10 @@ interface HeaderProps {
   onOpenTracking: () => void;
   onOpenAdmin: () => void;
   isAdmin: boolean;
+  isOwnerDevice?: boolean;
+  onToggleOwnerDevice?: () => void;
+  onOpenDesktopSetup?: () => void;
+  onMinimizeToTray?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,6 +34,10 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTracking,
   onOpenAdmin,
   isAdmin,
+  isOwnerDevice = false,
+  onToggleOwnerDevice,
+  onOpenDesktopSetup,
+  onMinimizeToTray,
 }) => {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/80 shadow-xs">
@@ -143,6 +162,48 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Desktop Actions */}
           <div className="flex items-center gap-2 shrink-0">
+            {/* 24x7 Owner Desktop Monitor Status Badge & Setup Button */}
+            {isOwnerDevice ? (
+              <div className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-xl">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="text-[11px] font-bold text-emerald-800 hidden lg:inline">
+                  24x7 मॉनिटर सक्रिय
+                </span>
+                {onMinimizeToTray && (
+                  <button
+                    type="button"
+                    onClick={onMinimizeToTray}
+                    className="p-1 rounded-lg text-emerald-700 hover:bg-emerald-100 transition"
+                    title="बैकग्राउंड में मिनिमाइज करें"
+                  >
+                    <Minimize2 className="w-3 h-3" />
+                  </button>
+                )}
+                {onOpenDesktopSetup && (
+                  <button
+                    type="button"
+                    onClick={onOpenDesktopSetup}
+                    className="text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white px-2 py-0.5 rounded-md transition"
+                    title="Windows ऑटो-स्टार्ट सेटअप"
+                  >
+                    PC सेटअप
+                  </button>
+                )}
+              </div>
+            ) : (
+              onToggleOwnerDevice && (
+                <button
+                  type="button"
+                  onClick={onToggleOwnerDevice}
+                  className="hidden md:flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-blue-200 bg-blue-50/80 hover:bg-blue-100 text-blue-700 text-xs font-bold transition shadow-2xs"
+                  title="दुकानदार 24x7 काउंटर मॉनिटर चालू करें ताकि नया ऑर्डर आते ही ऑटोमेटिक पॉपअप खुले"
+                >
+                  <Laptop className="w-3.5 h-3.5 text-blue-600" />
+                  <span>24x7 PC मॉनिटर ऑन करें</span>
+                </button>
+              )
+            )}
+
             <PWAInstallButton />
             <button
               onClick={onOpenTracking}

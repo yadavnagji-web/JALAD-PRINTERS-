@@ -21,6 +21,7 @@ import {
 import { CustomerOrder, OrderItem, PricingSettings, ShopSettings } from '../types';
 import { api } from '../services/api';
 import { playOrderChime } from '../utils/audioAlert';
+import { autoPrintOrder } from '../utils/silentPrinter';
 
 interface CashOrOnlinePaymentModalProps {
   isOpen: boolean;
@@ -33,6 +34,8 @@ interface CashOrOnlinePaymentModalProps {
   pricing: PricingSettings;
   language: 'hi' | 'en';
   onOrderCompleted: (order: CustomerOrder) => void;
+  initialMethod?: 'upi' | 'cash';
+  autoSubmitCash?: boolean;
 }
 
 export const CashOrOnlinePaymentModal: React.FC<CashOrOnlinePaymentModalProps> = ({
@@ -46,8 +49,10 @@ export const CashOrOnlinePaymentModal: React.FC<CashOrOnlinePaymentModalProps> =
   pricing,
   language,
   onOrderCompleted,
+  initialMethod = 'upi',
+  autoSubmitCash = false,
 }) => {
-  const [selectedMethod, setSelectedMethod] = useState<'upi' | 'cash'>('upi');
+  const [selectedMethod, setSelectedMethod] = useState<'upi' | 'cash'>(initialMethod);
   const [upiQrDataUrl, setUpiQrDataUrl] = useState<string>('');
   const [copiedUpi, setCopiedUpi] = useState(false);
   const [customerUtrNumber, setCustomerUtrNumber] = useState('');
@@ -55,6 +60,12 @@ export const CashOrOnlinePaymentModal: React.FC<CashOrOnlinePaymentModalProps> =
   const [isVerifying, setIsVerifying] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<CustomerOrder | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedMethod(initialMethod);
+    }
+  }, [isOpen, initialMethod]);
 
   const upiId = settings.shopUpiId || '8696312384@upi';
   const shopName = settings.shopName || 'JALAD PRINTERS & EMITRA CENTER CHIKHALI';
@@ -74,39 +85,6 @@ export const CashOrOnlinePaymentModal: React.FC<CashOrOnlinePaymentModalProps> =
       .then(setUpiQrDataUrl)
       .catch(console.error);
   }, [isOpen, upiUri]);
-
-  // Poll for approval if order is submitted and awaiting approval
-  useEffect(() => {
-    if (!createdOrder) return;
-    let isCancelled = false;
-
-    const interval = setInterval(async () => {
-      try {
-        const check = await api.getOrderById(createdOrder.id);
-        if (isCancelled || !check) return;
-        if (check.paymentStatus === 'paid') {
-          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
-          setCreatedOrder(null);
-          onOrderCompleted(check);
-        }
-      } catch (e) {
-        // Safe retry
-      }
-    }, 1200);
-
-    return () => {
-      isCancelled = true;
-      clearInterval(interval);
-    };
-  }, [createdOrder, onOrderCompleted]);
-
-  if (!isOpen) return null;
-
-  const copyUpiId = () => {
-    navigator.clipboard.writeText(upiId);
-    setCopiedUpi(true);
-    setTimeout(() => setCopiedUpi(false), 2000);
-  };
 
   // 1. Submit Order (Cash or Online UPI)
   const handleSubmitOrder = async (method: 'upi_qr' | 'counter_cash') => {
@@ -139,13 +117,73 @@ export const CashOrOnlinePaymentModal: React.FC<CashOrOnlinePaymentModalProps> =
     try {
       const created = await api.createOrder(newOrder);
       setCreatedOrder(created);
-      // Play sound chime to notify
       playOrderChime();
     } catch (err: any) {
       setErrorMessage(err.message || 'ऑर्डर सबमिट करने में समस्या आई');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Auto-submit cash order immediately if requested (1-click cash flow)
+  useEffect(() => {
+    if (isOpen && autoSubmitCash && !createdOrder && !isSubmitting) {
+      handleSubmitOrder('counter_cash');
+    }
+  }, [isOpen, autoSubmitCash]);
+
+  // Poll & SSE for instant approval sync when order is submitted
+  useEffect(() => {
+    if (!createdOrder) return;
+    let isCancelled = false;
+    let eventSource: EventSource | null = null;
+
+    const checkOrderStatus = async () => {
+      try {
+        const check = await api.getOrderById(createdOrder.id);
+        if (isCancelled || !check) return;
+        if (check.paymentStatus === 'paid') {
+          confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
+          playOrderChime();
+          autoPrintOrder(check);
+          setCreatedOrder(null);
+          onOrderCompleted(check);
+        }
+      } catch (e) {
+        // Safe retry
+      }
+    };
+
+    const interval = setInterval(checkOrderStatus, 1000);
+
+    // Live Server-Sent Events for zero-lag instant customer screen update
+    if (typeof EventSource !== 'undefined') {
+      try {
+        eventSource = new EventSource('/api/orders/live');
+        eventSource.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'order_approved' && data.data?.id === createdOrder.id) {
+              checkOrderStatus();
+            }
+          } catch {}
+        };
+      } catch {}
+    }
+
+    return () => {
+      isCancelled = true;
+      clearInterval(interval);
+      if (eventSource) eventSource.close();
+    };
+  }, [createdOrder?.id, onOrderCompleted]);
+
+  if (!isOpen) return null;
+
+  const copyUpiId = () => {
+    navigator.clipboard.writeText(upiId);
+    setCopiedUpi(true);
+    setTimeout(() => setCopiedUpi(false), 2000);
   };
 
   // 2. Direct Counter / Owner Quick Approval right inside modal
@@ -162,6 +200,7 @@ export const CashOrOnlinePaymentModal: React.FC<CashOrOnlinePaymentModalProps> =
       if (approved) {
         confetti({ particleCount: 120, spread: 80, origin: { y: 0.6 } });
         playOrderChime();
+        autoPrintOrder(approved);
         setCreatedOrder(null);
         onOrderCompleted(approved);
       }

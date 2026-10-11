@@ -56,6 +56,7 @@ import { runAutomatedTestSuite, TestResult } from '../utils/testRunner';
 import { OwnerShareModal } from './OwnerShareModal';
 import { UserAppQrModal } from './UserAppQrModal';
 import { OwnerBackgroundMonitor } from './OwnerBackgroundMonitor';
+import { DesktopSetupModal } from './DesktopSetupModal';
 
 interface AdminPanelProps {
   settings: ShopSettings;
@@ -119,6 +120,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
   const [isUserAppQrOpen, setIsUserAppQrOpen] = useState(false);
   const [isUploadingAdBanner, setIsUploadingAdBanner] = useState(false);
   const [searchShopkeeper, setSearchShopkeeper] = useState('');
+  const [isDesktopSetupModalOpen, setIsDesktopSetupModalOpen] = useState(false);
 
   // Desktop Background Minimized Mode State
   const [isMinimized, setIsMinimized] = useState<boolean>(() => {
@@ -445,6 +447,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* 24x7 Desktop Auto-Start Setup Download Button */}
+          <button
+            type="button"
+            onClick={() => setIsDesktopSetupModalOpen(true)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
+            title="दुकानदार डेस्कटॉप 24x7 ऑटो-स्टार्ट सेटअप डाउनलोड करें"
+          >
+            <Laptop className="w-3.5 h-3.5" />
+            <span>📥 PC सेटअप डाउनलोड</span>
+          </button>
+
           {/* Desktop Minimize Button */}
           <button
             type="button"
@@ -452,7 +465,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
               setIsMinimized(true);
               localStorage.setItem('sqp_owner_minimized', 'true');
             }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-xs cursor-pointer"
             title="डेस्कटॉप पर मिनिमाइज करें (Background Monitor Mode)"
           >
             <Minimize2 className="w-3.5 h-3.5" />
@@ -2114,6 +2127,102 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </span>
               </div>
 
+              {/* 1-Click 24x7 Desktop Auto-Start & Minimized Setup */}
+              <div className="bg-gradient-to-r from-blue-950/80 via-indigo-950/80 to-slate-950 border-2 border-blue-500/40 p-5 sm:p-6 rounded-3xl space-y-4 shadow-xl">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-md">
+                      <Laptop className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-base font-black text-white">
+                        दुकानदार 24x7 डेस्कटॉप ऑटो-स्टार्ट सेटअप (Windows 1-Click Installer)
+                      </h4>
+                      <p className="text-xs text-blue-200">
+                        कंप्यूटर चालू होते ही बैकग्राउंड में मिनिमाइज रहेगा • नया प्रिंट आते ही ऑटोमेटिक कैश/ऑनलाइन पॉपअप खुलेगा
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsDesktopSetupModalOpen(true)}
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md shadow-blue-600/30 transition cursor-pointer"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>सेटअप डायलॉग खोलें</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
+                  <a
+                    href="/api/setup/download/bat"
+                    download="SmartQRPrint-ShopMonitor-Setup.bat"
+                    className="p-3.5 rounded-2xl bg-slate-900 border border-blue-500/30 hover:border-blue-400 flex flex-col justify-between space-y-2 transition group"
+                  >
+                    <div>
+                      <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider block">
+                        Windows Startup Auto-Run
+                      </span>
+                      <strong className="text-white text-xs block mt-0.5 group-hover:text-blue-300">
+                        1. .BAT सेटअप डाउनलोड करें
+                      </strong>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        डबल-क्लिक करते ही Windows Startup फोल्डर में 24x7 ऑटो-स्टार्ट जोड़ देगा।
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 text-blue-400 font-bold text-[11px] pt-1">
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download .bat</span>
+                    </div>
+                  </a>
+
+                  <a
+                    href="/api/setup/download/vbs"
+                    download="SmartQRPrint-ShopMonitor.vbs"
+                    className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 flex flex-col justify-between space-y-2 transition group"
+                  >
+                    <div>
+                      <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
+                        Silent Background
+                      </span>
+                      <strong className="text-white text-xs block mt-0.5 group-hover:text-emerald-300">
+                        2. साइलेंट रनर (.vbs)
+                      </strong>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        बिना किसी कंसोल विंडो के बैकग्राउंड में शांति से चलता रहेगा।
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 text-emerald-400 font-bold text-[11px] pt-1">
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download .vbs</span>
+                    </div>
+                  </a>
+
+                  <a
+                    href="/api/setup/download/widget"
+                    download="SmartQRPrint-Desktop-Widget.html"
+                    className="p-3.5 rounded-2xl bg-slate-900 border border-purple-500/30 hover:border-purple-400 flex flex-col justify-between space-y-2 transition group"
+                  >
+                    <div>
+                      <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider block">
+                        Single-File HTML Widget
+                      </span>
+                      <strong className="text-white text-xs block mt-0.5 group-hover:text-purple-300">
+                        3. डेस्कटॉप विजेट (.html)
+                      </strong>
+                      <p className="text-[11px] text-slate-400 mt-1">
+                        Chrome / Edge में ऑफलाइन/ऑनलाइन कभी भी चलाएं।
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 text-purple-400 font-bold text-[11px] pt-1">
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download .html</span>
+                    </div>
+                  </a>
+                </div>
+              </div>
+
               {/* C# Source Code & Setup Guide */}
               <div className="bg-slate-950 border border-slate-800 p-5 rounded-2xl space-y-4">
                 <h4 className="text-sm font-bold text-white">
@@ -2234,6 +2343,17 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
         settings={settingsForm}
         isOpen={isUserAppQrOpen}
         onClose={() => setIsUserAppQrOpen(false)}
+      />
+
+      {/* 24x7 Desktop Auto-Start Setup Modal */}
+      <DesktopSetupModal
+        isOpen={isDesktopSetupModalOpen}
+        onClose={() => setIsDesktopSetupModalOpen(false)}
+        settings={settingsForm}
+        onActivateMinimizedMode={() => {
+          setIsMinimized(true);
+          localStorage.setItem('sqp_owner_minimized', 'true');
+        }}
       />
     </div>
   );
