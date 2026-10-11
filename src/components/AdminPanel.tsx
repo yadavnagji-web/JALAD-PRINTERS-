@@ -57,6 +57,7 @@ import { OwnerShareModal } from './OwnerShareModal';
 import { UserAppQrModal } from './UserAppQrModal';
 import { OwnerBackgroundMonitor } from './OwnerBackgroundMonitor';
 import { DesktopSetupModal } from './DesktopSetupModal';
+import { downloadSetupFile } from '../utils/downloadHelper';
 
 interface AdminPanelProps {
   settings: ShopSettings;
@@ -2155,10 +2156,10 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
-                  <a
-                    href="/api/setup/download/bat"
-                    download="SmartQRPrint-ShopMonitor-Setup.bat"
-                    className="p-3.5 rounded-2xl bg-slate-900 border border-blue-500/30 hover:border-blue-400 flex flex-col justify-between space-y-2 transition group"
+                  <button
+                    type="button"
+                    onClick={() => downloadSetupFile('bat', settingsForm.shopName)}
+                    className="p-3.5 rounded-2xl bg-slate-900 border border-blue-500/30 hover:border-blue-400 flex flex-col justify-between space-y-2 transition group text-left cursor-pointer"
                   >
                     <div>
                       <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider block">
@@ -2175,12 +2176,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       <Download className="w-3.5 h-3.5" />
                       <span>Download .bat</span>
                     </div>
-                  </a>
+                  </button>
 
-                  <a
-                    href="/api/setup/download/vbs"
-                    download="SmartQRPrint-ShopMonitor.vbs"
-                    className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 flex flex-col justify-between space-y-2 transition group"
+                  <button
+                    type="button"
+                    onClick={() => downloadSetupFile('vbs', settingsForm.shopName)}
+                    className="p-3.5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 flex flex-col justify-between space-y-2 transition group text-left cursor-pointer"
                   >
                     <div>
                       <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider block">
@@ -2197,12 +2198,12 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       <Download className="w-3.5 h-3.5" />
                       <span>Download .vbs</span>
                     </div>
-                  </a>
+                  </button>
 
-                  <a
-                    href="/api/setup/download/widget"
-                    download="SmartQRPrint-Desktop-Widget.html"
-                    className="p-3.5 rounded-2xl bg-slate-900 border border-purple-500/30 hover:border-purple-400 flex flex-col justify-between space-y-2 transition group"
+                  <button
+                    type="button"
+                    onClick={() => downloadSetupFile('widget', settingsForm.shopName)}
+                    className="p-3.5 rounded-2xl bg-slate-900 border border-purple-500/30 hover:border-purple-400 flex flex-col justify-between space-y-2 transition group text-left cursor-pointer"
                   >
                     <div>
                       <span className="text-[10px] font-bold text-purple-400 uppercase tracking-wider block">
@@ -2219,7 +2220,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({
                       <Download className="w-3.5 h-3.5" />
                       <span>Download .html</span>
                     </div>
-                  </a>
+                  </button>
                 </div>
               </div>
 

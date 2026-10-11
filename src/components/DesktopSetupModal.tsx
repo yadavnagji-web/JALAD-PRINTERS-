@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { ShopSettings } from '../types';
 import { playOrderChime } from '../utils/audioAlert';
+import { downloadSetupFile } from '../utils/downloadHelper';
 
 interface DesktopSetupModalProps {
   isOpen: boolean;
@@ -108,14 +109,14 @@ export const DesktopSetupModal: React.FC<DesktopSetupModalProps> = ({
                   यह फाइल Windows Startup में ऑटो-स्टार्ट जोड़ देगी ताकि कंप्यूटर ऑन होते ही यह मॉनिटर मिनिमाइज होकर चालू रहे।
                 </p>
               </div>
-              <a
-                href="/api/setup/download/bat"
-                download="SmartQRPrint-ShopMonitor-Setup.bat"
-                className="w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-md shadow-blue-600/30"
+              <button
+                type="button"
+                onClick={() => downloadSetupFile('bat', settings.shopName)}
+                className="w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-md shadow-blue-600/30 cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>.BAT सेटअप डाउनलोड करें</span>
-              </a>
+              </button>
             </div>
 
             {/* 2. Standalone HTML Desktop Widget */}
@@ -134,14 +135,14 @@ export const DesktopSetupModal: React.FC<DesktopSetupModalProps> = ({
                   एक सिंगल फाइल जिसे आप डेस्कटॉप पर रखकर Chrome या Edge में 24x7 मिनिमाइज चला सकते हैं।
                 </p>
               </div>
-              <a
-                href="/api/setup/download/widget"
-                download="SmartQRPrint-Desktop-Widget.html"
-                className="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-md shadow-purple-600/30"
+              <button
+                type="button"
+                onClick={() => downloadSetupFile('widget', settings.shopName)}
+                className="w-full py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-md shadow-purple-600/30 cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>HTML विजेट डाउनलोड करें</span>
-              </a>
+              </button>
             </div>
           </div>
 

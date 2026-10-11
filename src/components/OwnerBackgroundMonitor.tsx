@@ -17,6 +17,7 @@ import {
 import { ShopSettings } from '../types';
 import { playOrderChime } from '../utils/audioAlert';
 import { requestScreenWakeLock } from '../utils/wakeLock';
+import { downloadSetupFile } from '../utils/downloadHelper';
 
 interface OwnerBackgroundMonitorProps {
   settings: ShopSettings;
@@ -240,22 +241,22 @@ export const OwnerBackgroundMonitor: React.FC<OwnerBackgroundMonitorProps> = ({
                   नीचे दिए गए बटन पर क्लिक करके <code className="text-blue-400">.bat</code> फाइल डाउनलोड करें और एक बार चलाएं।
                 </p>
                 <div className="flex gap-2 pt-1">
-                  <a
-                    href="/api/setup/download/bat"
-                    download="SmartQRPrint-ShopMonitor-Setup.bat"
-                    className="flex-1 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-center text-xs flex items-center justify-center gap-1.5 transition"
+                  <button
+                    type="button"
+                    onClick={() => downloadSetupFile('bat', settings.shopName)}
+                    className="flex-1 py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-bold text-center text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>.BAT डाउनलोड करें (1-क्लिक)</span>
-                  </a>
-                  <a
-                    href="/api/setup/download/widget"
-                    download="SmartQRPrint-Desktop-Widget.html"
-                    className="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition"
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => downloadSetupFile('widget', settings.shopName)}
+                    className="py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>HTML विजेट</span>
-                  </a>
+                  </button>
                 </div>
               </div>
 

@@ -43,6 +43,7 @@ import {
   Share2,
   Lock,
   Megaphone,
+  X,
 } from 'lucide-react';
 
 export default function App() {
@@ -68,6 +69,7 @@ export default function App() {
   const [isRegistrationModalOpen, setIsRegistrationModalOpen] = useState(false);
   const [isOwnerLoginModalOpen, setIsOwnerLoginModalOpen] = useState(false);
   const [isDesktopSetupOpen, setIsDesktopSetupOpen] = useState(false);
+  const [isAppUpdateAvailable, setIsAppUpdateAvailable] = useState(false);
   const [isOwnerDevice, setIsOwnerDevice] = useState(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
@@ -133,8 +135,8 @@ export default function App() {
           if (!currentAppVersion) {
             currentAppVersion = data.version;
           } else if (currentAppVersion !== data.version) {
-            console.log('[Auto-Update] New app version detected. Refreshing customer app...');
-            window.location.reload();
+            console.log('[Auto-Update] New app version detected. Displaying update notification popup...');
+            setIsAppUpdateAvailable(true);
           }
         }
       } catch {
@@ -315,10 +317,10 @@ export default function App() {
 
       {/* 
         Shop Owner Payment Approval Popup:
-        Active on owner desktop / admin panel (minimized or open).
-        When a customer places a print order on mobile, this popup alerts the owner immediately!
+        Active ONLY when Admin Panel is open or in Minimized Monitor Mode.
+        Never shows on the customer's mobile app view.
       */}
-      {(isAdminOpen || isOwnerDevice) && (
+      {isAdminOpen && (
         <OwnerPaymentApprovalModal
           onOrderApproved={(order) => {
             if (trackingOrder && trackingOrder.id === order.id) {
@@ -682,6 +684,45 @@ export default function App() {
           localStorage.setItem('sqp_owner_minimized', 'true');
         }}
       />
+
+      {/* Auto-Update Notification Banner / Popup */}
+      {isAppUpdateAvailable && (
+        <div className="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-4 z-50 max-w-md bg-gradient-to-r from-blue-700 via-indigo-700 to-blue-800 text-white rounded-3xl p-4 sm:p-5 shadow-2xl border-2 border-amber-400/80 animate-in slide-in-from-bottom-5">
+          <div className="flex items-start gap-3">
+            <div className="p-2.5 bg-amber-400 text-slate-950 rounded-2xl shrink-0 font-black">
+              <Sparkles className="w-6 h-6" />
+            </div>
+            <div className="space-y-1.5 flex-1">
+              <div className="flex items-center justify-between">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-400 text-slate-950 uppercase tracking-wider">
+                  🚀 नया ऐप अपडेट उपलब्ध!
+                </span>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="text-xs text-blue-200 hover:text-white p-1"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <h4 className="text-sm font-black text-white">ऐप का नया संस्करण जारी हुआ है!</h4>
+              <p className="text-xs text-blue-100 leading-relaxed">
+                नवीनतम सुविधाओं, सुरक्षा सुधारों और तेज स्पीड के लिए कृपया बटन पर क्लिक करके ऐप रीलोड करें।
+              </p>
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="w-full py-2.5 px-4 rounded-2xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-black text-xs shadow-md transition flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  <RotateCcw className="w-4 h-4" />
+                  <span>अभी ऐप रीलोड करें (Update App Now)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer - Minimal and Clean */}
       <footer className="mt-auto border-t border-slate-200 bg-white py-3 sm:py-4 text-xs text-slate-500">
